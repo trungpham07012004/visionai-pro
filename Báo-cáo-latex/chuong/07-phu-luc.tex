@@ -1,0 +1,109 @@
+% ---------------------------------------------------------------------
+%  PHỤ LỤC
+% ---------------------------------------------------------------------
+\chapter{Phụ lục}
+\markboth{Phụ lục}{}
+
+\section*{A. Hướng dẫn cài đặt và chạy chương trình}
+\phantomsection
+\addcontentsline{toc}{section}{A. Hướng dẫn cài đặt và chạy chương trình}
+
+Các bước dưới đây được lấy theo quy trình trong \texttt{README.md} của source
+VisionAI Pro. Mở PowerShell tại thư mục chứa \texttt{app.py}.
+
+\begin{lstlisting}[language=bash, caption={Tạo môi trường và chạy ứng dụng trên Windows.}]
+py -3.11 -m venv .venv
+.\.venv\Scripts\Activate.ps1
+python -m pip install -r requirements.txt
+Copy-Item .env.example .env
+# Mo .env va tu dien GEMINI_API_KEY tren may cua ban.
+python -m streamlit run app.py
+\end{lstlisting}
+
+Có thể chạy \texttt{CHAY\_VISIONAI.bat} thay cho lệnh Streamlit. OCR cục bộ
+cần cài Tesseract và dữ liệu ngôn ngữ \texttt{vie}/\texttt{eng}; khi cần có
+thể dùng \texttt{setup\_ocr.ps1}. Chạy kiểm thử phần mềm bằng:
+
+\begin{lstlisting}[language=bash, caption={Chạy các kiểm thử cục bộ không cần gọi Gemini.}]
+.\.venv\Scripts\python.exe -m unittest discover -s tests -v
+\end{lstlisting}
+
+\subsection*{Cấu hình \texttt{.env}}
+
+Có thể tham khảo các biến sau trong \texttt{.env.example}:
+
+\begin{lstlisting}[language=bash, caption={Các biến môi trường của hệ thống.}]
+GEMINI_API_KEY=PASTE_YOUR_GEMINI_API_KEY_HERE
+GEMINI_MODELS=gemini-3.8-flash,gemini-3.6-flash,gemini-3.5-flash-lite
+EDGE_TTS_VOICE=vi-VN-HoaiMyNeural
+EDGE_TTS_RATE=+0%
+EDGE_TTS_PITCH=+0Hz
+STT_LANGUAGE=vi-VN
+TESSERACT_CMD=
+\end{lstlisting}
+
+Đây là tên biến và giá trị mặc định mẫu; không đưa API key thật vào báo cáo,
+ảnh chụp hoặc kho mã nguồn.
+
+\section*{B. Cấu trúc source tham khảo}
+\phantomsection
+\addcontentsline{toc}{section}{B. Cấu trúc source tham khảo}
+
+\begin{lstlisting}[caption={Cấu trúc chính của source VisionAI Pro.}]
+tro-ly-thi-giac/
+|-- app.py
+|-- requirements.txt
+|-- .env.example
+|-- README.md
+|-- setup_ocr.ps1
+|-- check_env.py
+|-- data/
+|   `-- history.json
+|-- tests/
+|   `-- test_core.py
+|-- ui/
+|   `-- vision_robot/
+`-- modules/
+    |-- ai_vision.py
+    |-- local_ocr.py
+    |-- accessibility.py
+    |-- robot_ui.py
+    |-- voice_commands.py
+    |-- speech.py
+    `-- utils.py
+\end{lstlisting}
+
+\section*{C. Bảng tự kiểm trước khi nộp}
+\phantomsection
+\addcontentsline{toc}{section}{C. Bảng tự kiểm trước khi nộp}
+
+\begin{tukiem}
+  \item Kiểm tra \texttt{.env} không chứa API key thật khi nộp hoặc chia sẻ source công khai.
+  \item Kiểm tra Tesseract và dữ liệu \texttt{vie}/\texttt{eng} nếu trình diễn OCR tiếng Việt.
+  \item Kiểm tra \texttt{pip install -r requirements.txt} và \texttt{python -m streamlit run app.py} trên máy trình diễn.
+  \item Kiểm tra robot, chế độ trợ năng, tải ảnh, camera, OCR, Vision, hỏi đáp, lệnh thoại, STT, TTS, lịch sử, yêu thích và xuất TXT.
+  \item Xác nhận STT qua Google Web Speech và Edge TTS cần Internet; không mô tả STT hiện tại là Faster-Whisper cục bộ.
+  \item Kiểm tra xử lý ảnh lớn/hỏng, lệnh xoá lịch sử có xác nhận và các lỗi cấu hình Gemini.
+  \item Mọi số liệu đánh giá trong báo cáo phải lấy từ kết quả kiểm thử thực tế.
+  \item Kiểm thử Gemini thật, độ chính xác mô hình và trải nghiệm người dùng cần được ghi riêng; 15 kiểm thử unit không thay thế các đánh giá này.
+  \item Không mô tả Faster-Whisper, database hoặc xử lý video thời gian thực như chức năng đã triển khai.
+\end{tukiem}
+
+\section*{D. Nhận xét của giảng viên hướng dẫn}
+\phantomsection
+\addcontentsline{toc}{section}{D. Nhận xét của giảng viên hướng dẫn}
+
+\khungnhanxet[7.5cm]
+
+\vspace{0.8em}
+\noindent\begin{minipage}[t]{0.5\textwidth}
+\color{daunavy}
+{\color{daumaroon}\bfseries Điểm số}
+
+\vspace{0.7em}
+\dongchamnhan{Bằng số:}
+
+\vspace{0.9em}
+\dongchamnhan{Bằng chữ:}
+\end{minipage}\hfill
+\okyten{\dauGVHD}{Giảng viên hướng dẫn}

@@ -1,0 +1,171 @@
+% ---------------------------------------------------------------------
+%  CHƯƠNG 2 — CƠ SỞ LÝ THUYẾT VÀ CÔNG NGHỆ
+% ---------------------------------------------------------------------
+\chapter{Cơ sở lý thuyết và công nghệ}
+\label{ch:coso}
+
+\begin{muctieu}
+Chương này trình bày các cơ sở lý thuyết và công nghệ thực tế được sử dụng
+trong hệ thống trợ lý thị giác AI. Nội dung tập trung vào AI đa phương thức,
+thị giác máy tính, OCR, nhận dạng và tổng hợp giọng nói, giao diện Streamlit
+và cơ chế lưu lịch sử/cấu hình phiên làm việc.
+\end{muctieu}
+
+\section{Kiến thức nền tảng}
+
+\subsection{Trí tuệ nhân tạo và AI đa phương thức}
+
+Trí tuệ nhân tạo \en{(Artificial Intelligence -- AI)} là lĩnh vực nghiên cứu
+các phương pháp giúp máy tính thực hiện những nhiệm vụ thường cần khả năng
+nhận thức và xử lý thông tin của con người. Trong đồ án, AI được sử dụng để
+phân tích hình ảnh, nhận biết vật thể, bối cảnh, nguy cơ, chữ và mệnh giá tiền,
+sau đó tạo phản hồi bằng tiếng Việt.
+
+Hệ thống có tính chất đa phương thức vì tiếp nhận hình ảnh, văn bản và bản ghi
+âm thanh đã được chuyển thành văn bản, đồng thời tạo ra văn bản và âm thanh phản
+hồi. Thành phần Vision sử dụng Gemini thông qua Google GenAI SDK để phân tích
+hình ảnh; API hỗ trợ đầu ra JSON có cấu trúc
+~\cite{GoogleGeminiVision2026,GoogleGeminiStructuredOutput2026,GoogleGenAIPython2026}.
+Trong source, Gemini được yêu cầu trả JSON qua MIME type; chương trình chuẩn hoá
+các trường nhận được trước khi hiển thị. Thành phần giọng nói đảm nhiệm STT và TTS.
+
+\subsection{Thị giác máy tính và Vision Language Model}
+
+Thị giác máy tính \en{(Computer Vision)} cho phép máy tính trích xuất thông tin
+có ý nghĩa từ hình ảnh. Trong hệ thống, ảnh được tải lên hoặc chụp từ camera,
+sau đó được chuyển thành dữ liệu phù hợp để gửi đến Gemini Vision
+~\cite{PillowImageModule2026}.
+
+Mô hình Vision được yêu cầu trả về các trường có cấu trúc như mô tả, độ tin
+cậy, bối cảnh, vật thể, nguy cơ, hướng dẫn di chuyển, văn bản nhận diện và
+mệnh giá tiền. Cách trả kết quả dạng JSON giúp chương trình Python có thể xử
+lý và hiển thị từng thành phần một cách ổn định.
+
+Ở mức nền tảng, Transformer và Vision Transformer là các hướng nghiên cứu áp
+dụng attention cho dữ liệu chuỗi và ảnh; CLIP là ví dụ về học liên kết ảnh với
+ngôn ngữ tự nhiên. Đây là tài liệu tham khảo lý thuyết, không phải các mô hình
+được gọi trực tiếp trong source của đồ án
+~\cite{Vaswani2017Attention,Dosovitskiy2021ViT,Radford2021CLIP}.
+
+Trong phiên bản hiện tại, việc chuẩn hoá ảnh trước khi gửi giúp giới hạn kích
+thước dữ liệu truyền; kết quả JSON giúp giao diện truy cập các trường theo
+tên thay vì phân tích văn bản tự do. Đây là lựa chọn về luồng dữ liệu, không
+phải cam kết về thời gian phản hồi cố định.
+
+\subsection{Nhận dạng ký tự quang học (OCR)}
+
+OCR \en{(Optical Character Recognition)} là kỹ thuật chuyển nội dung chữ
+trong hình ảnh thành văn bản. Đồ án sử dụng Tesseract OCR chạy cục bộ cho
+chế độ ``Đọc chữ trong ảnh (OCR)''. Đây là một nhánh xử lý riêng, không giả
+lập OCR bằng Gemini.
+
+Trước khi nhận dạng, ảnh được chuyển sang RGB, phóng to khi cần, tăng tương
+phản, tăng độ sắc nét và tạo thêm biến thể nhị phân. Tesseract được chạy với
+các chế độ phân đoạn phù hợp; dữ liệu tiếng Việt \texttt{vie} và tiếng Anh \texttt{eng} được
+ưu tiên khi có sẵn. Kết quả được lọc theo độ tin cậy và loại bỏ các chuỗi
+nhiễu trước khi hiển thị. Tesseract là bộ máy OCR mã nguồn mở; tài liệu kỹ
+thuật của Tesseract mô tả quy trình nhận dạng văn bản và các thành phần xử lý
+ảnh~\cite{Smith2007Tesseract,TesseractDocumentation2026}.
+
+\subsection{Nhận dạng giọng nói (Speech-to-Text)}
+
+Speech-to-Text \en{(STT)} chuyển giọng nói thành văn bản để hệ thống có thể
+xử lý câu hỏi của người dùng. Phiên bản hiện tại dùng thư viện
+\texttt{SpeechRecognition} gọi Google Web Speech để nhận dạng tiếng Việt.
+Luồng này cần kết nối Internet; âm thanh chỉ được gửi sau khi người dùng chủ
+động ghi âm và xác nhận xử lý. Source không tích hợp Faster-Whisper hoặc STT
+chạy cục bộ~\cite{SpeechRecognitionPackage2026}.
+
+\subsection{Tổng hợp giọng nói (Text-to-Speech)}
+
+Text-to-Speech \en{(TTS)} chuyển phản hồi văn bản thành âm thanh. Hệ thống
+ưu tiên Edge TTS với giọng tiếng Việt \texttt{vi-VN-HoaiMyNeural}~\cite{EdgeTTS2026}. Nếu Edge TTS gặp
+lỗi, ứng dụng chuyển sang Windows SAPI5 thông qua \texttt{pyttsx3}. File âm thanh
+được tạo tạm thời và phát bằng thành phần audio của Streamlit.
+
+\subsection{Khả năng tiếp cận cho người khiếm thị}
+
+Hệ thống hướng tới việc giảm phụ thuộc vào quan sát màn hình bằng cách cho
+phép người dùng tải/chụp ảnh, đặt câu hỏi bằng văn bản hoặc giọng nói và
+nghe kết quả. Các chức năng hỗ trợ gồm mô tả ảnh, đọc chữ, nhận diện tiền,
+phát hiện nguy cơ, hỗ trợ di chuyển và đọc kết quả bằng giọng nói. Các tiêu
+chí về focus bàn phím, tương phản và giảm chuyển động có liên quan đến hướng
+dẫn tiếp cận nội dung web WCAG~\cite{W3CWCAG22}. Hướng dẫn WAI về văn bản thay
+thế cũng phân biệt ảnh thông tin, ảnh trang trí và ảnh chức năng
+~\cite{W3CImagesTutorial2026}.
+
+\section{Công cụ và công nghệ}
+
+Bảng dưới đây được tổng hợp trực tiếp từ \texttt{requirements.txt}, \texttt{.env.example}
+và cấu trúc mã nguồn của phiên bản VisionAI Pro.
+
+\begin{table}[H]
+\centering
+\caption{Các công cụ, thư viện và công nghệ được sử dụng trong đồ án.}
+\label{tab:congcu}
+\begin{tabular*}{\textwidth}{@{\extracolsep{\fill}}>{\bfseries\color{daunavy}}p{3.1cm} >{\color{daumaroon}}p{3.1cm} p{7.0cm}}
+\toprule
+\rowcolor{gray100}
+Thành phần & Phiên bản khai báo tối thiểu & Vai trò trong hệ thống \\
+\midrule
+Python & Python 3.x & Ngôn ngữ lập trình chính cho giao diện, xử lý ảnh, AI và giọng nói. \\
+Streamlit & $\ge$ 1.50 & Framework xây dựng giao diện web chạy cục bộ. \\
+Google GenAI SDK & $\ge$ 1.30.0 & Kết nối Gemini để phân tích ảnh và hỏi đáp theo ảnh. \\
+Gemini Vision & ID mặc định trong source: \texttt{gemini-3.8-flash} & Đã kiểm tra kết nối bằng \texttt{gemini-3.5-flash-lite}; các model còn lại và độ chính xác chưa được đánh giá. \\
+Pillow & $\ge$ 10.0 & Đọc và xử lý ảnh đầu vào. \\
+Tesseract + pytesseract & pytesseract $\ge$ 0.3.13 & OCR cục bộ, ưu tiên dữ liệu tiếng Việt và tiếng Anh. \\
+SpeechRecognition & $\ge$ 3.10 & STT tiếng Việt thông qua Google Web Speech; cần Internet. \\
+Edge TTS & $\ge$ 7.0 & TTS tiếng Việt, ưu tiên giọng \texttt{vi-VN-HoaiMyNeural}. \\
+pyttsx3 & $\ge$ 2.98 & TTS dự phòng bằng Windows SAPI5. \\
+python-dotenv & $\ge$ 1.0 & Đọc biến môi trường và API key từ file \texttt{.env}. \\
+JSON & Có sẵn trong Python & Lưu lịch sử phân tích tại \texttt{data/history.json}, tối đa 100 bản ghi. \\
+\bottomrule
+\end{tabular*}
+\end{table}
+
+Bảng~\ref{tab:congcu} cho biết thư viện nào đảm nhiệm từng công đoạn, nhờ đó
+việc bảo trì và kiểm thử có thể tập trung vào từng thành phần. Tách riêng OCR,
+STT và TTS cũng giúp chọn dịch vụ phù hợp cho từng loại đầu vào; riêng OCR
+chạy cục bộ nên không phải tải ảnh lên Gemini khi người dùng chỉ cần đọc chữ.
+Ứng dụng giao diện được xây dựng trên Streamlit~\cite{StreamlitDocumentation2026}.
+Các thao tác lấy ảnh từ webcam và ghi âm dựa trên widget
+\texttt{st.camera\_input} và \texttt{st.audio\_input} của Streamlit
+~\cite{StreamlitCameraInput2026,StreamlitAudioInput2026}.
+
+Không sử dụng cơ sở dữ liệu quan hệ trong phiên bản source hiện tại. Lịch sử
+được lưu bằng tệp JSON cục bộ; cấu hình giọng nói, mức chi tiết và trạng thái
+hội thoại được quản lý bằng \texttt{st.session\_state} trong phiên Streamlit.
+
+\section{Mô hình AI và cơ chế dự phòng}
+
+Danh sách ID model Gemini được cấu hình theo thứ tự trong biến
+\texttt{GEMINI\_MODELS}; giá trị mặc định trong source là
+\texttt{gemini-3.8-flash,gemini-3.6-flash,gemini-3.5-flash-lite}. Ứng dụng lần lượt
+thử các model khi một yêu cầu gặp lỗi, dừng khi API từ chối khoá/quyền truy cập
+(401/403), và chờ ngắn trước khi chuyển model khi gặp giới hạn tốc độ (429).
+Danh sách dự phòng không khắc phục được khoá sai, hết hạn mức toàn tài khoản
+hoặc lỗi mạng; khả năng truy cập đã được xác nhận với
+\texttt{gemini-3.5-flash-lite}, còn các ID khác trong danh sách chưa được kiểm
+tra bằng yêu cầu API thật. Cài đặt có nút gửi một yêu cầu nhỏ để kiểm tra
+kết nối Gemini.
+
+Yêu cầu Vision sử dụng JSON response mode. Source không khai báo công cụ
+function calling; kết quả được chuẩn hoá về một cấu trúc thống nhất trước khi
+giao diện hiển thị.
+
+\section{Định hướng lựa chọn công nghệ}
+
+Source tách các tác vụ theo khả năng và phụ thuộc của từng thành phần: Gemini
+xử lý mô tả ảnh và hỏi đáp; Tesseract cung cấp OCR cục bộ; SpeechRecognition
+chuyển bản ghi thành văn bản qua dịch vụ trực tuyến; Edge TTS và Windows SAPI5
+tạo âm thanh phản hồi. Cách phân tách này cho phép dùng OCR khi không cần gọi
+Gemini, nhưng không đồng nghĩa toàn bộ ứng dụng chạy ngoại tuyến. Đây là mô tả
+kiến trúc source, không phải kết quả so sánh định lượng với hệ thống khác.
+
+\section{Tóm tắt chương}
+
+Chương này đã xác định các công nghệ thực tế của hệ thống gồm Python,
+Streamlit, Gemini Vision thông qua Google GenAI SDK, Pillow, Tesseract OCR,
+SpeechRecognition/Google Web Speech, Edge TTS, pyttsx3, python-dotenv và JSON.
+Các thành phần này tạo thành chuỗi xử lý đa phương thức từ ảnh/giọng nói đến
+phân tích AI, văn bản và âm thanh phản hồi.

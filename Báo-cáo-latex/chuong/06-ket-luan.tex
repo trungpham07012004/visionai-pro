@@ -1,0 +1,50 @@
+%% ---------------------------------------------------------------------
+%  CHƯƠNG 6 — KẾT LUẬN VÀ HƯỚNG PHÁT TRIỂN
+% ---------------------------------------------------------------------
+\chapter{Kết luận và hướng phát triển}
+\label{ch:ketluan}
+
+\begin{muctieu}
+Chương này tổng kết hệ thống đã xây dựng dựa trên source VisionAI Pro,
+rút ra bài học và đề xuất các hướng phát triển phù hợp với kiến trúc hiện tại.
+\end{muctieu}
+
+\section{Kết luận}
+
+Đồ án đã xây dựng một ứng dụng trợ lý thị giác AI bằng Python và Streamlit,
+cho phép tải/chụp ảnh, phân tích bằng Gemini Vision và đọc văn bản cục bộ bằng
+Tesseract. Ứng dụng bổ sung hỏi đáp theo ảnh, tìm vật, hỗ trợ di chuyển từ ảnh
+tĩnh, lệnh thoại và phản hồi bằng giọng nói. SpeechRecognition/Google Web Speech
+được dùng cho STT; Edge TTS và Windows SAPI5 đảm nhiệm TTS. Robot Vision, chế độ
+trợ năng, lịch sử có lọc/yêu thích, thống kê, xuất TXT và kiểm tra kết nối
+Gemini hoàn thiện các luồng sử dụng chính.
+
+Kiến trúc module tách Vision, OCR, Speech, trợ năng, lệnh thoại và robot.
+Trên source bàn giao, ứng dụng khởi chạy, health check đạt và 15/15 kiểm thử
+cục bộ đạt. Đây là kết quả kiểm thử phần mềm, không phải số đo độ chính xác
+của AI; Gemini API thật và chất lượng sử dụng với người khiếm thị chưa được
+đánh giá. Cá nhân hoá hiện chỉ ở mức cấu hình và trạng thái phiên làm việc.
+
+\section{Bài học rút ra}
+
+Quá trình xây dựng cho thấy một ứng dụng AI hỗ trợ người khiếm thị không chỉ
+cần mô hình AI mà còn cần thiết kế luồng dữ liệu, xử lý lỗi, khả năng tiếp cận,
+phản hồi âm thanh và chỉ dẫn an toàn. Việc tách OCR cục bộ, nhận dạng giọng nói
+trực tuyến, TTS, trợ năng và giao diện robot thành các module riêng giúp dễ
+kiểm thử và thay thế công nghệ.
+
+Đồ án cũng củng cố kỹ năng Python, Streamlit, xử lý ảnh, tích hợp API AI,
+xử lý âm thanh, quản lý biến môi trường và thiết kế một pipeline đa phương thức.
+
+\section{Hướng phát triển}
+
+Một số hướng phát triển phù hợp với source hiện tại gồm:
+\begin{itemize}[leftmargin=1.6em, itemsep=2pt]
+  \item Xây dựng hồ sơ người dùng và cơ chế cá nhân hoá lâu dài thay cho cấu hình chỉ tồn tại trong phiên.
+  \item Bổ sung bộ dữ liệu kiểm thử có nhãn để đo định lượng OCR, Vision, STT và khả năng nhận diện tiền.
+  \item Nghiên cứu STT cục bộ hoặc các lựa chọn nhận dạng khác để giảm phụ thuộc vào dịch vụ mạng, đồng thời đánh giá quyền riêng tư.
+  \item Mở rộng khả năng xử lý ảnh/video thời gian thực cho cảnh báo vật cản.
+  \item Bổ sung cơ chế cache, theo dõi lỗi mạng và phương án vận hành phù hợp khi Gemini, Google Web Speech hoặc TTS trực tuyến không khả dụng.
+  \item Đánh giá khả năng tiếp cận, lệnh thoại, kích thước chữ/nút và nội dung cảnh báo với người dùng mục tiêu.
+  \item Phát triển phiên bản mobile hoặc thiết bị đeo sau khi hoàn thiện pipeline và kiểm thử với người dùng thực tế.
+\end{itemize}

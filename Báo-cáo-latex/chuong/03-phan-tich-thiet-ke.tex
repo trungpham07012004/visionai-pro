@@ -1,0 +1,375 @@
+% ---------------------------------------------------------------------
+%  CHƯƠNG 3 — PHÂN TÍCH VÀ THIẾT KẾ
+% ---------------------------------------------------------------------
+\chapter{Phân tích và thiết kế}
+\label{ch:thietke}
+
+\begin{muctieu}
+Chương này phân tích các yêu cầu và mô tả kiến trúc thực tế của phiên bản
+VisionAI Pro. Trọng tâm là luồng xử lý ảnh, OCR local, Gemini Vision,
+STT/TTS, robot Vision, lệnh thoại, hỏi đáp theo ảnh và lưu lịch sử.
+\end{muctieu}
+
+\section{Phân tích bài toán và yêu cầu}
+
+Hệ thống được xây dựng nhằm hỗ trợ người khiếm thị tiếp nhận thông tin từ
+hình ảnh và tương tác với trợ lý bằng tiếng Việt. Người dùng có thể tải ảnh,
+chụp ảnh chủ động bằng camera, nhập câu hỏi hoặc ghi âm rồi xác nhận gửi.
+Ảnh được phân tích bằng Gemini Vision hoặc Tesseract OCR tuỳ chế độ; giọng nói
+được chuyển thành văn bản bằng Google Web Speech trước khi gửi câu hỏi tới Gemini.
+
+\subsection{Yêu cầu chức năng}
+
+Các chức năng đã được hiện thực trong source gồm:
+\begin{itemize}[leftmargin=1.6em, itemsep=2pt]
+  \item Hiển thị giao diện Streamlit với 11 trang: Trang chính, Phân tích hình ảnh, OCR, Hỗ trợ di chuyển, Hỏi đáp AI, Trợ lý giọng nói, Camera, Lịch sử, Thống kê, Cài đặt và Hướng dẫn.
+  \item Cho phép tải ảnh JPG/JPEG/PNG/WEBP hoặc chụp ảnh bằng camera.
+  \item Phân tích ảnh theo các chế độ: mô tả toàn cảnh, nhận biết vật thể và vị trí, OCR, nhận diện tiền Việt, hỗ trợ người khiếm thị và hỗ trợ di chuyển.
+  \item Trả về mô tả, bối cảnh, vật thể, nguy cơ, hướng dẫn di chuyển, văn bản và mệnh giá tiền theo cấu trúc dữ liệu chuẩn hoá.
+  \item OCR local bằng Tesseract, không sử dụng credit AI cloud.
+  \item Cho phép hỏi tiếp về ảnh gần nhất và duy trì tối đa các lượt hội thoại gần nhất trong phiên.
+  \item Nhận giọng nói tiếng Việt bằng SpeechRecognition/Google Web Speech; chỉ xử lý bản ghi sau thao tác xác nhận của người dùng.
+  \item Chuyển kết quả văn bản thành giọng nói bằng Edge TTS hoặc Windows SAPI5 qua pyttsx3; hỗ trợ lựa chọn giọng đọc.
+  \item Cung cấp robot Vision tương tác, hỏi đáp theo ngữ cảnh trang hiện tại và ảnh gần nhất, tìm vật trong ảnh và lệnh thoại điều hướng/đọc lại.
+  \item Lưu lịch sử phân tích vào \texttt{data/history.json}; hỗ trợ lọc, đánh dấu yêu thích, xoá có xác nhận, thống kê và xuất báo cáo TXT.
+  \item Cung cấp chế độ trợ năng, bật/tắt giọng đọc, mức chi tiết và lựa chọn giọng trong phiên Streamlit.
+\end{itemize}
+
+\subsection{Yêu cầu phi chức năng}
+
+\begin{itemize}[leftmargin=1.6em, itemsep=2pt]
+  \item \textbf{Khả năng tiếp cận:} ưu tiên phản hồi âm thanh và nội dung ngắn, dễ nghe.
+  \item \textbf{Tính ổn định:} kiểm tra ảnh đầu vào, giới hạn dung lượng, báo lỗi dễ hiểu và thử danh sách model Gemini đã cấu hình.
+  \item \textbf{An toàn thông tin:} API key được đọc từ \texttt{.env} và không đưa vào source công khai.
+  \item \textbf{Khả năng chạy cục bộ:} giao diện chạy bằng Streamlit trên Windows; OCR dùng Tesseract cục bộ, còn Gemini, Google Web Speech và Edge TTS cần mạng.
+  \item \textbf{Khả năng mở rộng:} danh sách model Gemini, ngôn ngữ STT và giọng TTS có thể cấu hình qua biến môi trường.
+\end{itemize}
+
+\section{Thiết kế kiến trúc hệ thống}
+
+Kiến trúc thực tế được tổ chức thành bốn nhóm: giao diện Streamlit, xử lý
+ảnh/âm thanh, các dịch vụ AI và lớp lưu trữ cục bộ. \texttt{app.py} điều phối giao
+diện và gọi các module trong thư mục \texttt{modules/}.
+
+\begin{figure}[H]
+\centering
+\resizebox{\textwidth}{!}{%
+\begin{tikzpicture}[
+    font=\small\sffamily,
+    box/.style={rectangle, rounded corners=5pt, draw=daunavy, fill=daunavy!7, thick, minimum width=4.2cm, minimum height=0.8cm, align=center},
+    ai/.style={rectangle, rounded corners=5pt, draw=daumaroon, fill=daumaroon!7, thick, minimum width=4.2cm, minimum height=0.8cm, align=center},
+    data/.style={rectangle, rounded corners=5pt, draw=daunavy, fill=white, thick, minimum width=4.2cm, minimum height=0.8cm, align=center},
+    arrow/.style={-Stealth, thick, draw=daunavy}
+]
+\node (user)     [box]  at (1.25,0)    {Người dùng};
+\node (ui)       [box]  at (1.25,-1.4) {Streamlit \texttt{app.py}};
+\node (image)    [box]  at (-5,-2.9)   {Ảnh tải lên / camera};
+\node (question) [box]  at (5,-2.9)    {Câu hỏi văn bản / audio};
+
+\node (vision)   [ai]   at (-7.5,-4.8) {Gemini Vision\\Google GenAI SDK};
+\node (ocr)      [ai]   at (-2.5,-4.8) {Tesseract OCR\\local / chế độ OCR};
+\node (stt)      [ai]   at (2.5,-4.8)  {SpeechRecognition\\Google Web Speech};
+\node (qa)       [ai]   at (7.5,-4.8)  {Gemini hỏi đáp\\ảnh gần nhất nếu có};
+
+\node (analysis) [box]  at (-5,-6.8)   {Kết quả phân tích ảnh};
+\node (answer)   [box]  at (7.5,-6.8)  {Trả lời hỏi đáp};
+\node (display)  [box]  at (1.25,-8.6) {Hiển thị trong Streamlit};
+
+\node (history)  [data] at (-9,-8.6)   {history.json\\chỉ lưu kết quả\\phân tích};
+\node (tts)      [ai]   at (1.25,-10.4) {Edge TTS\\Windows SAPI5 dự phòng\\khi người dùng yêu cầu đọc};
+\node (audio)    [box]  at (1.25,-12.2) {Audio tùy chọn};
+
+\draw [arrow] (user) -- (ui);
+\draw [arrow] (ui.south) -- ++(0,-0.4) -| (image.north);
+\draw [arrow] (ui.south) -- ++(0,-0.4) -| (question.north);
+\draw [arrow] (image.south) -- ++(0,-0.4) -| (vision.north);
+\draw [arrow] (image.south) -- ++(0,-0.4) -| (ocr.north);
+\draw [arrow] (question.south) -- ++(0,-0.4) -| (stt.north);
+\draw [arrow] (question.south) -- ++(0,-0.4) -| (qa.north);
+\draw [arrow] (stt.east) -- (qa.west);
+
+\draw [arrow] (vision.south) -- ++(0,-0.5) -| (analysis.north);
+\draw [arrow] (ocr.south) -- ++(0,-0.5) -| (analysis.north);
+\draw [arrow] (qa.south) -- (answer.north);
+
+\draw [arrow] (analysis.west) -| (history.north);
+\draw [arrow] (analysis.south) |- (display.west);
+\draw [arrow] (answer.south) |- (display.east);
+\draw [arrow] (display) -- (tts);
+\draw [arrow] (tts) -- (audio);
+\end{tikzpicture}
+}
+\caption{Kiến trúc thực tế của hệ thống Trợ lý thị giác AI.}
+\label{fig:kientruc}
+\end{figure}
+
+Hình~\ref{fig:kientruc} tách luồng phân tích ảnh khỏi luồng hỏi đáp. Ảnh được
+đưa tới Gemini hoặc Tesseract tuỳ chế độ; khi người dùng đặt câu hỏi bằng
+giọng nói, STT chuyển bản ghi thành văn bản trước khi gửi cho Gemini. Câu hỏi
+nhập bằng bàn phím bỏ qua STT. TTS chỉ được gọi khi người dùng yêu cầu nghe;
+kết quả phân tích ảnh được lưu vào lịch sử cục bộ.
+
+Trong source, OCR local là nhánh riêng với Gemini Vision. STT là một nhánh
+riêng nhưng gọi Google Web Speech thông qua
+\texttt{SpeechRecognition}, nên cần Internet. Kết quả từ Gemini và OCR đều được
+chuẩn hoá để giao diện hiển thị; hỏi đáp có thể kèm ảnh gần nhất làm ngữ cảnh.
+
+\section{Thiết kế luồng xử lý hình ảnh}
+
+Luồng xử lý dưới đây bám sát hàm \texttt{analyze\_image()} và \texttt{analyze\_local\_ocr()}
+trong source.
+
+\begin{figure}[H]
+\centering
+\resizebox{0.95\textwidth}{!}{%
+\begin{tikzpicture}[
+    font=\small\sffamily,
+    block/.style={rectangle, rounded corners=5pt, draw=daunavy, fill=white, thick, minimum width=6.2cm, minimum height=0.8cm, align=center},
+    ai/.style={rectangle, rounded corners=5pt, draw=daumaroon, fill=daumaroon!7, thick, minimum width=6.2cm, minimum height=0.8cm, align=center},
+    decision/.style={diamond, draw=daunavy, fill=daunavy!7, thick, aspect=2.6, align=center, inner sep=1pt},
+    arrow/.style={-Stealth, thick, draw=daunavy},
+    lab/.style={font=\scriptsize\sffamily, fill=white, inner sep=1pt}
+]
+\node (start)    [block]    at (0,0)        {Tải ảnh / Chụp camera};
+\node (mode)     [decision] at (0,-1.7)     {Chế độ OCR?};
+\node (ocr)      [ai]       at (-4.4,-3.9)  {Chọn OCR:\\Tesseract local\\tiền xử lý + nhận dạng};
+\node (vision)   [ai]       at (4.4,-3.9)   {Chế độ khác:\\Gemini Vision\\JSON response};
+\node (retry)    [block]    at (4.4,-5.9)   {Thử model theo danh sách\\429: chờ ngắn; 401/403: dừng};
+\node (fallback) [block]    at (4.4,-8.0)   {OCR local dự phòng\\nếu tất cả model thất bại\\(chỉ đọc chữ)};
+\node (normalize)[block]    at (0,-10.2)    {Chuẩn hoá kết quả};
+\node (display)  [block]    at (0,-11.6)    {Hiển thị kết quả + cảnh báo};
+\node (save)     [block]    at (-4.4,-13.3) {Lưu history.json\\sau phân tích ảnh};
+\node (optional) [block]    at (4.4,-13.3)  {TTS / xuất TXT\\khi người dùng yêu cầu};
+
+\draw [arrow] (start) -- (mode);
+\draw [arrow] (mode.west) -| (ocr.north) node[lab, pos=0.25] {Có};
+\draw [arrow] (mode.east) -| (vision.north) node[lab, pos=0.25] {Không};
+\draw [arrow] (vision) -- (retry);
+\draw [arrow] (retry) -- (fallback) node[lab, midway] {thất bại};
+\draw [arrow] (ocr.south) |- (normalize.west);
+\draw [arrow] (retry.west) -| (normalize.north) node[lab, pos=0.25] {thành công};
+\draw [arrow] (fallback.south) |- (normalize.east);
+\draw [arrow] (normalize) -- (display);
+\draw [arrow] (display.south) -- ++(0,-0.4) -| (save.north);
+\draw [arrow] (display.south) -- ++(0,-0.4) -| (optional.north);
+\end{tikzpicture}
+}
+\caption{Sơ đồ luồng xử lý ảnh theo source VisionAI Pro.}
+\label{fig:luong_xuly_chitiet}
+\end{figure}
+
+Các bước chính gồm:
+\begin{enumerate}[leftmargin=1.8em, itemsep=3pt]
+  \item Người dùng tải ảnh hoặc chụp ảnh từ camera.
+  \item Ứng dụng kiểm tra chế độ. Nếu chọn OCR, ảnh được đưa vào Tesseract local.
+  \item Với các chế độ Vision, ảnh được mã hoá thành data URL, tách bytes và MIME type rồi gửi tới Gemini.
+  \item Gemini được yêu cầu trả về một JSON object gồm mô tả, độ tin cậy, bối cảnh, vật thể, nguy cơ, navigation, OCR và tiền.
+  \item Nếu một model Gemini gặp lỗi, ứng dụng lần lượt thử model tiếp theo; với 429, ứng dụng chờ ngắn trước lần thử tiếp theo, còn 401/403 thì dừng.
+  \item Nếu toàn bộ yêu cầu Vision thất bại, source thử OCR local và ghi cảnh báo rõ rằng kết quả OCR không thay thế phân tích cảnh/vật thể.
+  \item Kết quả được chuẩn hoá, hiển thị trên giao diện và có thể đọc bằng TTS, lưu lịch sử hoặc xuất TXT.
+\end{enumerate}
+
+Giải thuật~\ref{alg:xuly-anh} tóm tắt luồng xử lý trên. Nhánh OCR được chọn
+trực tiếp khi người dùng chọn chế độ OCR; OCR cũng được thử làm phương án dự
+phòng khi mọi yêu cầu Gemini phát sinh lỗi. Nếu OCR dự phòng không khả dụng,
+ứng dụng báo lỗi thay vì tạo kết quả phân tích thay thế.
+
+\begin{algorithm}[H]
+\caption{Xử lý ảnh theo chế độ OCR hoặc Vision}
+\label{alg:xuly-anh}
+\hspace*{\algorithmicindent}\textbf{Đầu vào:} ảnh $I$, chế độ xử lý $m$, danh sách model Gemini $M$\\
+\hspace*{\algorithmicindent}\textbf{Đầu ra:} kết quả đã chuẩn hoá và cảnh báo (nếu có)
+\begin{algorithmic}[1]
+\Function{XuLyAnh}{$I, m, M$}
+  \If{$m = \text{OCR}$}
+    \State $r \gets \Call{OCRLocal}{I}$
+  \Else
+    \State $r \gets \Call{GeminiVision}{I, M}$
+    \If{Tất cả yêu cầu Gemini phát sinh lỗi}
+      \State $r \gets \Call{OCRLocal}{I}$
+      \State Gắn cảnh báo rằng OCR không thay thế phân tích cảnh và vật thể
+    \EndIf
+  \EndIf
+  \State $r \gets \Call{ChuanHoa}{r}$
+  \State Hiển thị $r$ trên giao diện
+  \State Lưu kết quả phân tích ảnh vào history.json
+  \State TTS và xuất TXT chỉ thực hiện khi người dùng yêu cầu
+  \State \Return $r$
+\EndFunction
+\end{algorithmic}
+\end{algorithm}
+
+\section{Thiết kế luồng hỏi đáp và giọng nói}
+
+\begin{figure}[H]
+\centering
+\resizebox{0.95\textwidth}{!}{%
+\begin{tikzpicture}[
+    font=\small\sffamily,
+    block/.style={rectangle, rounded corners=5pt, draw=daunavy, fill=white, thick, minimum width=5.2cm, minimum height=0.8cm, align=center},
+    ai/.style={rectangle, rounded corners=5pt, draw=daumaroon, fill=daumaroon!7, thick, minimum width=5.2cm, minimum height=0.8cm, align=center},
+    decision/.style={diamond, draw=daunavy, fill=daunavy!7, thick, aspect=2.4, align=center, inner sep=1pt},
+    arrow/.style={-Stealth, thick, draw=daunavy},
+    lab/.style={font=\scriptsize\sffamily, fill=white, inner sep=1pt}
+]
+\node (text)        [block]    at (-3.6,0)    {Câu hỏi nhập bằng bàn phím};
+\node (audio_input) [block]    at (3.6,0)     {Ghi âm + xác nhận\\của người dùng};
+\node (stt)         [ai]       at (3.6,-1.9)  {SpeechRecognition\\Google Web Speech};
+\node (parser)      [decision] at (0,-4.0)    {Lệnh cục bộ?};
+\node (local)       [block]    at (-4.4,-6.4) {Lệnh cục bộ:\\điều hướng / trợ giúp\\đọc lại};
+\node (qa)          [ai]       at (4.4,-6.4)  {Hỏi Gemini:\\tìm vật trong ảnh\\ảnh gần nhất nếu có};
+\node (answer)      [block]    at (4.4,-8.2)  {Câu trả lời bằng văn bản};
+\node (tts)         [ai]       at (4.4,-10.0) {Edge TTS\\Windows SAPI5 dự phòng\\nếu người dùng yêu cầu đọc};
+\node (player)      [block]    at (4.4,-11.8) {Audio tùy chọn};
+
+\draw [arrow] (text.south) |- (parser.west);
+\draw [arrow] (audio_input) -- (stt);
+\draw [arrow] (stt.south) |- (parser.east);
+\draw [arrow] (parser.south west) -| (local.north) node[lab, pos=0.25] {Có};
+\draw [arrow] (parser.south east) -| (qa.north) node[lab, pos=0.25] {Không};
+\draw [arrow] (qa) -- (answer);
+\draw [arrow] (answer) -- (tts);
+\draw [arrow] (tts) -- (player);
+\end{tikzpicture}
+}
+\caption{Luồng xử lý giọng nói, hỏi đáp theo ảnh và phản hồi âm thanh.}
+\label{fig:luong_giongnoi}
+\end{figure}
+
+Hình~\ref{fig:luong_giongnoi} mô tả trình tự sau khi người dùng chủ động
+ghi âm và xác nhận: nhận dạng trực tuyến, xử lý lệnh thoại hoặc gửi câu hỏi
+cùng ngữ cảnh tới Gemini, rồi phát câu trả lời bằng TTS khi được yêu cầu.
+Các mũi tên thể hiện thứ tự xử lý, không phải luồng âm thanh thời gian thực.
+
+Người dùng chủ động ghi âm và xác nhận để \texttt{SpeechRecognition} gửi âm
+thanh tới Google Web Speech chuyển thành văn bản. Câu hỏi sau đó được gửi cùng
+ngữ cảnh trang và ảnh gần nhất (nếu có) tới Gemini. Kết quả có thể được đọc
+bằng Edge TTS hoặc Windows SAPI5 khi Edge TTS gặp lỗi. Luồng này không phải
+hội thoại âm thanh thời gian thực.
+
+\section{Thiết kế cơ chế cá nhân hoá}
+
+Phiên bản source hiện tại thực hiện cá nhân hoá ở mức phiên làm việc thay vì
+xây dựng hồ sơ người dùng hoặc cơ sở dữ liệu. \texttt{st.session\_state} lưu trạng thái
+trợ năng, bật/tắt giọng nói, giọng đọc, mức chi tiết, chế độ hiện tại, ảnh gần nhất,
+ngữ cảnh trang và lịch sử chat. Ngoài ra, \texttt{history.json} lưu tối đa 100 bản ghi
+phân tích để người dùng xem lại, lọc và đánh dấu yêu thích.
+
+\begin{figure}[H]
+\centering
+\begin{tikzpicture}[
+    node distance=0.85cm and 0.9cm,
+    font=\small\sffamily,
+    box/.style={rectangle, rounded corners=5pt, draw=daunavy, fill=white, thick, minimum width=3.3cm, minimum height=0.72cm, align=center},
+    center/.style={rectangle, rounded corners=5pt, draw=daumaroon, fill=daumaroon!7, thick, minimum width=3.6cm, minimum height=0.9cm, align=center},
+    arrow/.style={-Stealth, thick, draw=daunavy}
+]
+\node (settings) [box] {Voice / Detail / Mode};
+\node (image) [box, below=of settings] {Ảnh gần nhất};
+\node (chat) [box, below=of image] {Ngữ cảnh chat};
+\node (session) [center, right=1.3cm of image] {st.session\_state};
+\node (analysis) [box, right=1.3cm of session] {Kết quả phân tích ảnh};
+\node (history) [box, below=of analysis] {history.json\\tối đa 100 bản ghi};
+\node (result) [box, below=1.0cm of session] {Kết quả và trải nghiệm phiên};
+\draw [arrow] (settings) -- (session);
+\draw [arrow] (image) -- (session);
+\draw [arrow] (chat) -- (session);
+\draw [arrow] (session) -- (result);
+\draw [arrow] (session) -- (analysis);
+\draw [arrow] (analysis) -- (history);
+\end{tikzpicture}
+\caption{Cơ chế cá nhân hoá và lưu trạng thái thực tế của phiên bản hiện tại.}
+\label{fig:canhanhoa}
+\end{figure}
+
+Hình~\ref{fig:canhanhoa} thể hiện các tuỳ chọn và ngữ cảnh tạm thời được giữ
+trong phiên Streamlit, còn các kết quả được lưu riêng trong tệp lịch sử.
+Điều này giải thích vì sao phiên bản hiện tại chưa có hồ sơ cá nhân lâu dài.
+
+Cách tiếp cận này phù hợp với phạm vi nguyên mẫu. Source chưa có đăng nhập,
+hồ sơ người dùng hoặc cơ sở dữ liệu quan hệ; vì vậy báo cáo không mô tả các
+thành phần này như một chức năng đã triển khai.
+
+\section{Thiết kế dữ liệu}
+
+Dữ liệu phân tích được biểu diễn bằng cấu trúc JSON gồm các trường \texttt{summary},
+\texttt{confidence}, \texttt{scene}, \texttt{objects}, \texttt{accessibility\_tips}, \texttt{text\_detected},
+\texttt{money\_detected}, \texttt{hazards}, \texttt{navigation} và \texttt{warning}. Lịch sử được lưu trong
+\texttt{data/history.json} và mỗi lần lưu chỉ giữ tối đa 100 bản ghi gần nhất.
+
+\section{Thiết kế giao diện}
+
+Giao diện được xây dựng bằng Streamlit với thanh điều hướng bên trái và một
+robot Vision đồ hoạ có thể mở chat hoặc điều hướng tới các công cụ. Các trang
+gồm trang chính, phân tích ảnh, OCR, hỗ trợ di chuyển, hỏi đáp AI, trợ lý giọng
+nói, camera, lịch sử, thống kê, cài đặt và hướng dẫn. Chế độ trợ năng tăng cỡ
+chữ/nút và làm rõ focus bàn phím; người dùng có thể đổi giọng đọc, bật/tắt
+giọng nói, kiểm tra kết nối Gemini và xoá phiên hoặc lịch sử.
+
+Hình~\ref{fig:bocuc-web} mô tả bố cục trang chính. Thanh bên chứa điều hướng
+11 trang cùng các công tắc trợ năng; khu vực chính gồm robot Vision, hàng
+thẻ công cụ, kết quả gần nhất và cột hoạt động gần đây.
+
+\begin{figure}[H]
+\centering
+\resizebox{\textwidth}{!}{%
+\begin{tikzpicture}[
+    font=\scriptsize\sffamily,
+    frame/.style={rectangle, rounded corners=4pt, draw=daunavy, thick, fill=white},
+    side/.style={rectangle, rounded corners=4pt, draw=daunavy, thick, fill=daunavy!7},
+    hero/.style={rectangle, rounded corners=4pt, draw=daumaroon, thick, fill=daumaroon!7},
+    card/.style={rectangle, rounded corners=3pt, draw=daunavy, thick, fill=daunavy!7, align=center, minimum width=1.38cm, minimum height=1.3cm, inner sep=2pt},
+    btn/.style={rectangle, rounded corners=2pt, draw=daunavy, fill=white, align=center, inner sep=2pt, minimum height=0.42cm},
+    lbl/.style={font=\scriptsize\sffamily\bfseries, text=daunavy, anchor=west}
+]
+% khung ngoài
+\draw[frame] (0,0) rectangle (15.4,8.9);
+% ---------- thanh bên ----------
+\draw[side] (0.15,0.15) rectangle (3.75,8.75);
+\node[anchor=north west, font=\scriptsize\sffamily\bfseries, text=daumaroon] at (0.3,8.6) {VisionAI Pro};
+\node[anchor=north west, font=\tiny\sffamily] at (0.3,8.25) {Trạng thái AI: Đã sẵn sàng};
+\node[anchor=north west, align=left, font=\tiny\sffamily, text width=3.2cm] at (0.3,7.85)
+  {Điều hướng (11 trang):\\[1pt]
+   Trang chính\\ Phân tích hình ảnh\\ OCR\\ Hỗ trợ di chuyển\\ Hỏi đáp AI\\
+   Trợ lý giọng nói\\ Camera\\ Lịch sử\\ Thống kê\\ Cài đặt\\ Hướng dẫn};
+\node[btn, minimum width=3.2cm] at (1.95,3.05) {Trò chuyện với Vision};
+\node[btn, minimum width=3.2cm] at (1.95,2.4) {Công tắc giọng nói};
+\node[btn, minimum width=3.2cm] at (1.95,1.75) {Công tắc trợ năng};
+\node[btn, minimum width=3.2cm] at (1.95,0.9) {Xóa phiên hiện tại};
+% ---------- robot ----------
+\draw[hero] (3.95,6.55) rectangle (15.25,8.75);
+\node[btn, minimum width=4.2cm, align=left] at (6.15,8.2) {Lời thoại của robot Vision};
+\node[anchor=west, font=\small\sffamily\bfseries] at (4.15,7.45) {VisionAI Pro};
+\node[btn, anchor=west] (hb1) at (4.15,6.9) {Phân tích hình ảnh};
+\node[btn, anchor=west] (hb2) at ([xshift=0.2cm]hb1.east) {Đọc văn bản};
+\node[btn, anchor=west] at ([xshift=0.2cm]hb2.east) {Hỏi đáp theo ảnh};
+\node[rectangle, rounded corners=6pt, draw=daumaroon, fill=white, minimum width=2.4cm, minimum height=1.7cm, align=center] at (13.3,7.65) {Robot Vision\\(16 trạng thái\\biểu cảm)};
+% ---------- cột chính ----------
+\node[lbl] at (3.95,6.2) {Công cụ};
+\foreach \i/\t in {0/{Phân tích\\ảnh},1/{Đọc\\văn bản},2/{Hỏi đáp\\ảnh},3/{Giọng\\nói},4/{Camera}} {
+  \node[card] at (4.65+\i*1.52,5.35) {\t};
+  \node[btn, minimum width=1.38cm, font=\tiny\sffamily] at (4.65+\i*1.52,4.45) {Mở};
+}
+\node[lbl] at (3.95,3.85) {Kết quả gần nhất};
+\draw[frame] (3.95,0.3) rectangle (11.55,3.6);
+\node[align=left, anchor=north west, font=\tiny\sffamily] at (4.1,3.45)
+  {Mô tả, bối cảnh, cảnh báo an toàn, vật thể,\\
+   tiền Việt, văn bản OCR, gợi ý cho người khiếm thị,\\
+   nút nghe kết quả và nút xuất báo cáo TXT.};
+% ---------- cột phải ----------
+\node[btn, minimum width=3.4cm] at (13.4,6.2) {Cấu hình Gemini};
+\draw[frame] (11.75,0.3) rectangle (15.25,5.85);
+\node[anchor=north west, font=\scriptsize\sffamily\bfseries, text=daunavy] at (11.9,5.7) {Hoạt động gần đây};
+\node[anchor=north west, align=left, font=\tiny\sffamily] at (11.9,5.25)
+  {Tối đa 4 bản ghi\\từ \texttt{history.json}\\(chế độ và thời điểm\\phân tích).};
+\end{tikzpicture}}
+\caption[Sơ đồ bố cục trang chính của giao diện web]{Sơ đồ bố cục trang chính của giao diện web, vẽ lại từ cấu trúc trong \texttt{app.py}; đây là sơ đồ thiết kế, không phải ảnh chụp màn hình.}
+\label{fig:bocuc-web}
+\end{figure}
+
+\section{Thiết kế thành phần AI}
+
+Thành phần AI được tách thành \texttt{modules/ai\_vision.py}, \texttt{modules/local\_ocr.py}
+và \texttt{modules/speech.py}. \texttt{ai\_vision.py} phụ trách Gemini Vision và hỏi đáp theo
+ảnh; \texttt{local\_ocr.py} phụ trách Tesseract; \texttt{speech.py} phụ trách STT/TTS. Cách
+tách module giúp thay đổi từng thành phần mà không phải sửa toàn bộ giao diện.

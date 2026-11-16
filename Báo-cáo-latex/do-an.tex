@@ -1,0 +1,137 @@
+% !TEX program = xelatex
+% =====================================================================
+%  BÁO CÁO ĐỒ ÁN TRÍ TUỆ NHÂN TẠO, HỌC PHẦN AIP202
+%  Khoa Công nghệ Thông tin, Trường Đại học Kiến trúc Đà Nẵng
+%
+%  Build:  latexmk -xelatex do-an.tex
+%  Overleaf: Menu > Compiler > XeLaTeX, rồi bấm Recompile.
+%
+%  Khung tài liệu chuyển thể từ mẫu đồ án của Trường Đại học Nha Trang
+%  (github.com/nd-hung/thesis-template, tác giả TS. Nguyễn Đình Hưng).
+%  Toàn bộ nhận diện, phông chữ, bảng màu, trang bìa và cấu trúc chương
+%  được thay theo chuẩn của DAU và theo đề cương học phần AIP202.
+% =====================================================================
+% \documentclass phải nằm ở file này, không được chuyển vào settings.tex,
+% vì Overleaf dò file chính bằng cách tìm file có chứa \documentclass.
+\documentclass[12pt, a4paper, oneside]{book}
+\input{styles/settings}
+
+% =====================================================================
+%  TỐI ƯU THỜI GIAN BIÊN DỊCH (TRÁNH LỖI TIMEOUT)
+%  Khi hoàn thiện báo cáo, để các dòng \includeonly được comment để
+%  biên dịch đầy đủ toàn bộ các chương.
+% =====================================================================
+%\includeonly{chuong/01-mo-dau}
+%\includeonly{chuong/02-co-so-ly-thuyet}
+%\includeonly{chuong/03-phan-tich-thiet-ke}
+%\includeonly{chuong/04-cai-dat}
+%\includeonly{chuong/05-ket-qua-danh-gia}
+%\includeonly{chuong/06-ket-luan}
+
+% =====================================================================
+%  CẤU HÌNH TIÊU ĐỀ TIẾNG VIỆT CHO CÁC DANH MỤC
+% =====================================================================
+\renewcommand{\contentsname}{Mục lục}
+\renewcommand{\listfigurename}{Danh sách hình vẽ}
+\renewcommand{\listtablename}{Danh sách bảng}
+\providecommand{\listalgorithmname}{Danh mục giải thuật}
+\providecommand{\listalgorithmcfname}{Danh mục giải thuật}
+\renewcommand{\listalgorithmname}{Danh mục giải thuật}
+\renewcommand{\listalgorithmcfname}{Danh mục giải thuật}
+
+% =====================================================================
+%  PHẦN EM ĐIỀN: thông tin đồ án
+% =====================================================================
+% Loại báo cáo
+\crname{BÁO CÁO ĐỒ ÁN TRÍ TUỆ NHÂN TẠO}
+% Học phần
+\cmonhoc{Học phần AIP202 \textperiodcentered{} 2 tín chỉ}
+% Tên đề tài. Dùng \\ để ngắt dòng cho cân đối trên bìa.
+\ctname{XÂY DỰNG TRỢ LÝ AI CÁ NHÂN HÓA\\HỖ TRỢ NGƯỜI KHIẾM THỊ}
+
+% Họ tên sinh viên và mã số sinh viên
+\cstuname{Phạm Phước Trung}
+\cmssv{2251220208}
+
+\cstunameTwo{Phạm Hoàng Nam}
+\cmssvTwo{2151220151}
+% Lớp
+\clopsv{CNTT 23CT2}
+% Ngành
+\csCouncil{Công nghệ thông tin}
+% Giảng viên hướng dẫn
+\csSupervise{TS. Đỗ Phúc Hảo}
+% Năm học
+\cttime{2026--2027}
+% Khoa quản lý
+\csdeptname{KHOA CÔNG NGHỆ THÔNG TIN}
+% Nơi thực hiện
+\csplace{Đà Nẵng}
+
+\begin{document}
+
+% Bìa trang trọng có khung kép. Muốn dùng bìa hiện đại theo bộ giáo
+% trình của khoa thì thay dòng dưới bằng \coverpagehiendai
+\coverpage
+
+% ---------------------------------------------------------------------
+%  PHẦN ĐẦU: đánh số trang bằng số La Mã thường
+% ---------------------------------------------------------------------
+\frontmatter
+\dauPageStyle
+
+\input{chuong/00-loi-cam-doan}
+\input{chuong/00-loi-cam-on}
+\input{chuong/00-tom-tat}
+
+% --- MỤC LỤC ---
+\cleardoublepage
+\phantomsection
+\addcontentsline{toc}{chapter}{Mục lục}
+\tableofcontents
+
+% --- DANH SÁCH HÌNH VẼ ---
+\cleardoublepage
+\phantomsection
+\addcontentsline{toc}{chapter}{Danh sách hình vẽ}
+\listoffigures
+
+% --- DANH SÁCH BẢNG ---
+\cleardoublepage
+\phantomsection
+\addcontentsline{toc}{chapter}{Danh sách bảng}
+\listoftables
+
+% --- DANH MỤC GIẢI THUẬT ---
+\cleardoublepage
+\phantomsection
+\addcontentsline{toc}{chapter}{Danh mục giải thuật}
+\listofalgorithms
+
+% ---------------------------------------------------------------------
+%  THÂN BÁO CÁO: sáu chương theo quy cách của học phần
+% ---------------------------------------------------------------------
+\mainmatter
+\dauPageStyle
+
+\include{chuong/01-mo-dau}
+\include{chuong/02-co-so-ly-thuyet}
+\include{chuong/03-phan-tich-thiet-ke}
+\include{chuong/04-cai-dat}
+\include{chuong/05-ket-qua-danh-gia}
+\include{chuong/06-ket-luan}
+
+% ---------------------------------------------------------------------
+%  TÀI LIỆU THAM KHẢO VÀ PHỤ LỤC
+% ---------------------------------------------------------------------
+\backmatter
+
+\cleardoublepage
+\phantomsection
+\addcontentsline{toc}{chapter}{Tài liệu tham khảo}
+\bibliographystyle{plain}
+\bibliography{refs}
+
+\input{chuong/07-phu-luc}
+
+\end{document}

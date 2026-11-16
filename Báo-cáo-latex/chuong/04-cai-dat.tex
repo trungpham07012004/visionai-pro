@@ -1,0 +1,545 @@
+%% ---------------------------------------------------------------------
+%  CHƯƠNG 4 — CÀI ĐẶT VÀ THỬ NGHIỆM
+% ---------------------------------------------------------------------
+\chapter{Cài đặt và thử nghiệm}
+\label{ch:caidat}
+
+\begin{muctieu}
+Chương này trình bày môi trường phát triển và triển khai, cấu trúc mã nguồn,
+các thành phần đã cài đặt và quy trình chạy thực tế của phiên bản
+VisionAI Pro.
+\end{muctieu}
+
+\section{Môi trường phát triển và triển khai}
+
+Theo tài liệu \texttt{README.md} của source, hệ thống được hướng dẫn chạy trên
+Windows bằng PowerShell hoặc terminal tại thư mục chứa \texttt{app.py}. Ứng dụng
+được triển khai theo hình thức chạy cục bộ bằng Streamlit, không có cấu hình
+server production hoặc dịch vụ cloud riêng trong source hiện tại.
+
+\begin{table}[H]
+\centering
+\caption{Môi trường phát triển và triển khai được xác định từ source.}
+\label{tab:moitruong}
+\begin{tabular*}{\textwidth}{@{\extracolsep{\fill}}>{\bfseries\color{daunavy}}p{3.0cm} >{\color{daumaroon}}p{4.2cm} p{6.0cm}}
+\toprule
+\rowcolor{gray100}
+Thành phần & Thông tin & Ghi chú \\
+\midrule
+Hệ điều hành & Windows & README hướng dẫn chạy bằng PowerShell; script OCR sử dụng winget và đường dẫn Tesseract của Windows. \\
+Python & Python 3.11 hoặc 3.12 & README hướng dẫn hai phiên bản này; requirements không khóa phiên bản Python. \\
+Giao diện & Streamlit $\ge$ 1.50 & Chạy bằng lệnh \texttt{streamlit run app.py}. \\
+AI Vision & Gemini theo \texttt{GEMINI\_MODELS} & Đã kiểm tra kết nối và chạy ảnh mẫu bằng \texttt{gemini-3.5-flash-lite}; chưa đánh giá độ chính xác tổng quát. \\
+OCR & Tesseract + pytesseract & Chạy local; setup script tải \texttt{vie.traineddata} và \texttt{eng.traineddata}. \\
+STT & SpeechRecognition / Google Web Speech & Nhận dạng tiếng Việt qua mạng; không có STT Whisper cục bộ. \\
+TTS & Edge TTS / Windows SAPI5 & Edge TTS ưu tiên; \texttt{pyttsx3} dùng SAPI5 khi cần. \\
+Cấu hình & \texttt{.env} & Lưu API key, danh sách model, ngôn ngữ STT, giọng TTS và đường dẫn Tesseract. \\
+Lưu trữ & \texttt{data/history.json} & Lưu lịch sử phân tích cục bộ, tối đa 100 bản ghi. \\
+\bottomrule
+\end{tabular*}
+\end{table}
+
+Bảng~\ref{tab:moitruong} tóm tắt các yêu cầu môi trường lấy từ hướng dẫn chạy
+source; các thông số phần cứng không có trong tài liệu nên không được suy đoán.
+Không có đủ thông tin từ source để xác định chính xác CPU, RAM hoặc phiên bản
+Python đã cài trên máy phát triển. Vì vậy các thông số phần cứng này không
+được đưa thành số liệu chính thức trong báo cáo.
+
+\section{Cài đặt và chạy hệ thống}
+
+Quy trình chạy được mô tả trong \texttt{README.md} và có thể thực hiện theo các bước:
+
+\begin{lstlisting}[language=bash, caption={Cài đặt thư viện và khởi chạy ứng dụng trên Windows.}]
+pip install -r requirements.txt
+streamlit run app.py
+\end{lstlisting}
+
+Trước khi chạy chức năng Gemini, người dùng cần tạo file \texttt{.env} và khai báo
+\texttt{GEMINI\_API\_KEY}. Không đưa giá trị khoá vào báo cáo hoặc ảnh chụp.
+Các biến trong mẫu cấu hình gồm \texttt{GEMINI\_MODELS}, \texttt{EDGE\_TTS\_VOICE},
+\texttt{EDGE\_TTS\_RATE}, \texttt{EDGE\_TTS\_PITCH}, \texttt{STT\_LANGUAGE} và
+\texttt{TESSERACT\_CMD}.
+
+Đối với OCR tiếng Việt trên Windows, source cung cấp \texttt{setup\_ocr.ps1}. Script
+có thể yêu cầu quyền Administrator, sử dụng \texttt{winget} để cài Tesseract và tải
+các dữ liệu ngôn ngữ \texttt{vie.traineddata} và \texttt{eng.traineddata}.
+
+\section{Cấu trúc mã nguồn}
+
+Cấu trúc chính của source gồm:
+
+\begin{table}[H]
+\centering
+\caption{Các tệp và thư mục chính của hệ thống.}
+\label{tab:cautrucsource}
+\begin{tabular*}{\textwidth}{@{\extracolsep{\fill}}>{\bfseries\color{daunavy}}p{4.1cm} p{9.0cm}}
+\toprule
+\rowcolor{gray100}
+Tệp / thư mục & Chức năng \\
+\midrule
+\texttt{app.py} & Điểm vào chính, giao diện Streamlit, điều hướng, hiển thị kết quả và điều phối các module. \\
+\texttt{modules/ai\_vision.py} & Gemini Vision, hỏi đáp theo ảnh, chuẩn hoá JSON và thử model theo danh sách. \\
+\texttt{modules/local\_ocr.py} & Tiền xử lý ảnh và OCR local bằng Tesseract. \\
+\texttt{modules/speech.py} & STT Google Web Speech và TTS Edge/Windows. \\
+\texttt{modules/robot\_ui.py}, \texttt{ui/vision\_robot/} & Robot Vision tương tác và các lối tắt điều hướng. \\
+\texttt{modules/accessibility.py} & Tạo nội dung đọc thành tiếng và xử lý văn bản OCR. \\
+\texttt{modules/voice\_commands.py} & Phân tích lệnh thoại điều hướng, tìm vật, trợ giúp và đọc lại. \\
+\texttt{modules/utils.py} & Chuẩn hoá ảnh, lưu/đọc lịch sử, yêu thích và xuất báo cáo TXT. \\
+\texttt{data/history.json} & Tệp lịch sử cục bộ được tạo khi có kết quả; không đóng gói dữ liệu lịch sử. \\
+\texttt{tests/test\_core.py} & Kiểm thử cục bộ cho xử lý ảnh, lịch sử, trợ năng, lệnh thoại và yêu cầu Gemini. \\
+\texttt{ui/} & Thành phần giao diện web nhúng cho robot. \\
+\texttt{setup\_ocr.ps1} & Cài Tesseract và dữ liệu OCR tiếng Việt/Anh trên Windows. \\
+\texttt{.env.example} & Mẫu cấu hình biến môi trường; không chứa API key thật. \\
+\texttt{requirements.txt} & Danh sách thư viện Python cần cài đặt. \\
+\bottomrule
+\end{tabular*}
+\end{table}
+
+Bảng~\ref{tab:cautrucsource} mô tả trách nhiệm của từng module và vị trí các
+kiểm thử, giúp người đọc lần theo luồng xử lý trong mã nguồn.
+
+Gói source đi kèm báo cáo chứa mã ứng dụng, các module cần thiết, kiểm thử,
+README và cấu hình mẫu có trường API key để trống. Gói không chứa \texttt{.env},
+môi trường ảo, thư mục Git hoặc lịch sử runtime; khoá API cần được tạo riêng
+trên máy chạy ứng dụng và không đưa vào kho công khai.
+\section{Các thành phần chính}
+
+\begin{itemize}[leftmargin=1.6em, itemsep=2pt]
+  \item \textbf{Giao diện:} Streamlit cung cấp 11 trang, robot Vision, chế độ trợ năng, upload/camera/audio input, kết quả và nút xuất báo cáo.
+  \item \textbf{AI Vision:} Gemini phân tích ảnh, tạo JSON có cấu trúc và trả lời câu hỏi theo ảnh gần nhất.
+  \item \textbf{OCR local:} Tesseract đọc chữ mà không gọi AI cloud.
+  \item \textbf{STT:} SpeechRecognition gửi bản ghi đã xác nhận tới Google Web Speech; cần Internet.
+  \item \textbf{TTS:} Edge TTS tạo MP3; Windows SAPI5/pyttsx3 là fallback.
+  \item \textbf{Lịch sử và xuất báo cáo:} \texttt{history.json} lưu tối đa 100 bản ghi; \texttt{export\_report()} tạo báo cáo TXT.
+\end{itemize}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=\textwidth]{visionai-ui.png}
+\caption{Ảnh giao diện trang chính VisionAI Pro do người dùng cung cấp, gồm robot Vision và các thẻ công cụ; không phải kết quả phân tích ảnh.}
+\label{fig:visionai-ui}
+\end{figure}
+
+Hình~\ref{fig:visionai-ui} ghi lại giao diện ứng dụng đang chạy; đây là
+ảnh chụp trang chính để minh hoạ cách người dùng mở các công cụ, không phải
+ảnh chụp kết quả phân tích Gemini.
+
+\section{Cài đặt các chức năng chính}
+
+\subsection{Cài đặt phân tích hình ảnh}
+
+Ảnh được lấy từ \texttt{st.file\_uploader} hoặc \texttt{st.camera\_input}; camera
+chỉ chụp sau thao tác chủ động của người dùng, không truyền video trực tiếp.
+Ứng dụng giới hạn ảnh 15 MB, kiểm tra ảnh hợp lệ, áp dụng hướng EXIF, đổi sang
+RGB, thu nhỏ cạnh tối đa 1600 pixel và mã hoá JPEG trước khi gửi tới module xử lý.
+Các giới hạn này đặt trần cho dung lượng đầu vào, giảm số pixel cần mã hoá
+và lượng dữ liệu truyền tới dịch vụ so với ảnh gốc độ phân giải cao. Đây là
+lý do thiết kế nhằm giảm tải xử lý/truyền dữ liệu; báo cáo không khẳng định
+mức tăng tốc định lượng khi chưa đo thời gian thực tế.
+
+\begin{lstlisting}[language=Python, caption={Điều phối chế độ OCR và Gemini Vision trong app.py.}]
+if mode == "Đọc chữ trong ảnh (OCR)":
+    result = analyze_local_ocr(raw)
+else:
+    result = analyze_image(data_url, mode, detail, scene_style)
+\end{lstlisting}
+
+\begin{table}[H]
+\centering
+\caption{Các bước tối ưu đầu vào và giới hạn dữ liệu trong pipeline.}
+\label{tab:toiuu-anh}
+\begin{tabular*}{\textwidth}{@{\extracolsep{\fill}}>{\bfseries\color{daunavy}}p{3.0cm} p{4.1cm} p{6.0cm}}
+\toprule
+\rowcolor{gray100}
+Bước & Giới hạn trong source & Mục đích / tác động dự kiến \\
+\midrule
+Kiểm tra đầu vào & Tối đa 15 MB; từ chối tệp rỗng hoặc ảnh lỗi & Giới hạn dữ liệu cần đọc và tránh đưa tệp không hợp lệ vào pipeline. \\
+Chuẩn hoá ảnh Vision & Hướng EXIF, RGB, cạnh tối đa 1600 px, JPEG chất lượng 88 & Giảm số pixel và payload gửi tới Gemini so với ảnh gốc độ phân giải cao. \\
+Tiền xử lý OCR & Cạnh tối đa 2600 px; ảnh grayscale và nhị phân & Giữ kích thước xử lý hữu hạn, tạo biến thể để Tesseract thử nhận diện chữ. \\
+Lịch sử & Tối đa 100 bản ghi; thay thế tệp nguyên tử & Giữ dữ liệu lưu trữ hữu hạn và giảm nguy cơ tệp JSON bị ghi dở. \\
+\bottomrule
+\end{tabular*}
+\end{table}
+
+Bảng~\ref{tab:toiuu-anh} giải thích tác dụng của các giới hạn trong pipeline.
+Thu nhỏ và nén ảnh có thể giảm thời gian mã hoá/truyền khi ảnh nguồn lớn,
+nhưng chất lượng mạng, dịch vụ Gemini và nội dung ảnh cũng ảnh hưởng thời gian
+đáp ứng. Muốn kết luận ứng dụng chạy nhanh hơn bao nhiêu cần đo trên cùng bộ
+ảnh, thiết bị và kết nối; hiện chưa có phép đo như vậy.
+
+\subsection{Cài đặt Gemini Vision}
+
+\texttt{ai\_vision.py} tạo client bằng API key trong \texttt{.env}, gửi ảnh cùng prompt tới
+Gemini và yêu cầu kết quả JSON. Prompt quy định các trường bắt buộc như
+\texttt{summary}, \texttt{objects}, \texttt{hazards}, \texttt{navigation}, \texttt{text\_detected} và
+\texttt{money\_detected}. Kết quả sau đó được chuẩn hoá để tránh lỗi dữ liệu trước khi
+hiển thị. Nội dung do AI trả về được escape trước khi chèn vào HTML của giao
+diện để tránh làm hỏng cấu trúc hiển thị bởi các ký tự đặc biệt.
+
+Ứng dụng lần lượt thử các model trong \texttt{GEMINI\_MODELS}; khi gặp 429,
+ứng dụng chờ ngắn trước khi thử model tiếp theo. Lỗi 401/403 khiến quá trình
+dừng và báo cấu hình/quyền truy cập, thay vì lặp lại vô hạn. Trang Cài đặt có
+nút gửi một yêu cầu nhỏ để kiểm tra kết nối Gemini. Nếu mọi yêu cầu Vision
+thất bại, hàm xử lý thử Tesseract local và gắn cảnh báo rằng kết quả thay thế
+chỉ là văn bản OCR, không phải mô tả cảnh hay vật thể.
+
+Trong lần chạy thử thực tế, kiểm tra kết nối Gemini thành công với model
+\texttt{gemini-3.5-flash-lite}. Chế độ nhận diện tiền mô tả tờ tiền 200.000
+đồng với độ tin cậy 0,98; chế độ hỗ trợ di chuyển phát cảnh báo nguy cơ cao
+trên ảnh giao thông tĩnh với độ tin cậy 0,90. Chế độ mô tả toàn cảnh và nhận
+biết vật thể/vị trí cũng được chạy trên ảnh phong cảnh; chế độ hỗ trợ người
+khiếm thị được chạy trên ảnh tiền và trả về ba dòng chữ nhận diện. Đây là các
+lần thử chức năng trên ảnh đơn lẻ, không phải phép đo độ chính xác của mô hình.
+Hỏi đáp ảnh và tìm vật cũng đã gọi Gemini, nhưng giao diện hiển thị câu trả
+lời dạng JSON thô thay vì câu trả lời tự nhiên.
+
+\subsection{Cài đặt OCR local}
+
+\texttt{local\_ocr.py} sử dụng Pillow để chuẩn bị ảnh và pytesseract để gọi Tesseract.
+Ảnh được chỉnh hướng EXIF, thu nhỏ giới hạn 2600 pixel, chuyển grayscale,
+tăng tương phản/làm nét và tạo hai biến thể xử lý. Tesseract thử PSM 6 và 11,
+lọc từ có độ tin cậy dưới 12\%, gom theo dòng và chọn một kết quả để tránh
+ghép lặp. Hệ thống dùng ngôn ngữ \texttt{vie}, \texttt{eng} hoặc cả hai tuỳ dữ
+liệu đã cài.
+
+Máy kiểm tra chỉ có dữ liệu Tesseract cài đặt hệ thống \texttt{eng} và
+\texttt{osd}, thiếu \texttt{vie.traineddata}. Để thử lại mà không thay đổi cài
+đặt hệ thống, dữ liệu \texttt{vie} được đặt trong thư mục tạm và truyền qua
+\texttt{TESSDATA\_PREFIX}. Trên ảnh tiền, Tesseract hiển thị độ tin cậy tổng
+hợp 84\%, nhưng vẫn nhận sai nhiều nội dung: \texttt{CONG:HOA XÃ HỘI CHỦ NGHĨA
+tM} thay vì ``CỘNG HÒA XÃ HỘI CHỦ NGHĨA'' và \texttt{Bee: NGHÌN DONG} thay
+vì ``HAI TRĂM NGHÌN ĐỒNG''. Ảnh có vùng phản sáng; độ tin cậy do OCR trả về
+không đồng nghĩa với độ chính xác ngữ nghĩa. Người dùng cần cài dữ liệu
+\texttt{vie} theo script đi kèm và kiểm tra lại nội dung quan trọng.
+
+\subsection{Cài đặt STT}
+
+Người dùng bấm ghi âm, sau đó bấm xác nhận nhận diện trước khi bản ghi được
+chuyển thành văn bản. \texttt{speech.py} lưu tạm âm thanh, giới hạn dung lượng
+15 MB và gọi \texttt{SpeechRecognition.recognize\_google()} với ngôn ngữ
+\texttt{vi-VN}; yêu cầu mạng có timeout 15 giây. File tạm được xoá sau xử lý.
+Đây là STT trực tuyến, không phải Whisper chạy trên máy.
+
+\subsection{Cài đặt TTS}
+
+\texttt{text\_to\_speech()} ưu tiên Edge TTS với giọng được chọn trong cài đặt.
+Khi Edge TTS không tạo được file, chương trình sử dụng Windows SAPI5 qua pyttsx3. File
+âm thanh được tạo tạm thời và đưa vào \texttt{st.audio} để phát cho người dùng.
+
+\subsection{Lịch sử, thống kê và xuất báo cáo}
+
+\texttt{save\_history()} ghi nguyên tử bản ghi phân tích vào
+\texttt{data/history.json} và giới hạn lịch sử ở 100 bản ghi gần nhất. Trang Lịch
+sử hỗ trợ lọc và đánh dấu yêu thích; xoá toàn bộ yêu cầu xác nhận. Trang Thống
+kê tổng hợp dữ liệu đã lưu. Hàm \texttt{export\_report()} tạo file TXT gồm mô tả,
+vật thể, cảnh báo, OCR, tiền, gợi ý và điều hướng.
+
+\section{Cơ chế cá nhân hoá}
+
+Source hiện thực cá nhân hoá ở mức phiên làm việc thông qua \texttt{st.session\_state}:
+người dùng có thể bật/tắt giọng đọc, chọn mức chi tiết Thấp/Vừa/Cao, chọn giọng
+đọc, bật chế độ trợ năng và giữ ảnh/ngữ cảnh hội thoại gần nhất. Đây chưa phải
+hệ thống hồ sơ cá nhân có đăng nhập hoặc cơ sở dữ liệu.
+
+\section{Giao diện và các chức năng}
+
+Giao diện có 11 trang: Trang chính, Phân tích hình ảnh, OCR, Hỗ trợ di chuyển,
+Hỏi đáp AI, Trợ lý giọng nói, Camera, Lịch sử, Thống kê, Cài đặt và Hướng dẫn.
+Robot Vision có thể mở chat hoặc lối tắt chức năng; lệnh thoại hỗ trợ điều
+hướng trang, tìm vật trong ảnh gần nhất, trợ giúp và đọc lại. Chế độ trợ năng
+tăng cỡ chữ/nút và làm rõ focus bàn phím.
+
+Hình~\ref{fig:banner-visionai} là tài nguyên đồ hoạ thương hiệu được cung cấp
+cùng source, không phải ảnh chụp màn hình hay bằng chứng về kết quả phân tích.
+Ảnh giao diện trang chính do người dùng cung cấp được trình bày ở
+Hình~\ref{fig:visionai-ui}.
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=\textwidth]{visionai_hero_banner.png}
+\caption[Banner nhận diện VisionAI Pro]{Tài nguyên banner đồ hoạ VisionAI Pro (không phải ảnh chụp màn hình).}
+\label{fig:banner-visionai}
+\end{figure}
+
+Bảng~\ref{tab:congcu-giaodien} tổng hợp 11 công cụ (trang) của giao diện web,
+đối chiếu với danh sách điều hướng trong \texttt{app.py}; cột cuối nêu thành
+phần mã nguồn phụ trách chính.
+
+\begin{table}[H]
+\centering
+\small\linespread{1.05}\selectfont
+\caption{Các công cụ hỗ trợ trên giao diện web của VisionAI Pro.}
+\label{tab:congcu-giaodien}
+\begin{tabular*}{\textwidth}{@{\extracolsep{\fill}}>{\raggedright\arraybackslash\bfseries\color{daunavy}}p{2.9cm} >{\raggedright\arraybackslash}p{8.3cm} >{\raggedright\arraybackslash}p{3.3cm}}
+\toprule
+\rowcolor{gray100}
+Công cụ (trang) & Hỗ trợ người dùng & Thành phần phụ trách \\
+\midrule
+Trang chính & Hiển thị robot Vision, năm thẻ công cụ (phân tích ảnh, đọc văn bản, hỏi đáp ảnh, giọng nói, camera), kết quả gần nhất và hoạt động gần đây. & \texttt{app.py}, \texttt{robot\_ui.py} \\
+Phân tích hình ảnh & Tải ảnh hoặc chụp ảnh, chọn một trong sáu chế độ (mô tả toàn cảnh, nhận biết vật thể và vị trí, OCR, nhận diện tiền Việt, hỗ trợ người khiếm thị, hỗ trợ di chuyển) rồi phân tích. & \texttt{ai\_vision.py}, \texttt{local\_ocr.py} \\
+OCR & Đọc chữ trong ảnh bằng Tesseract cục bộ; kết quả theo từng dòng và có thể nghe lại. & \texttt{local\_ocr.py}, \texttt{accessibility.py} \\
+Hỗ trợ di chuyển & Phân tích ảnh phía trước để ưu tiên lối đi, vật cản và cầu thang; luôn kèm cảnh báo rằng ảnh tĩnh không thay thế gậy hay chó dẫn đường. & \texttt{ai\_vision.py} \\
+Hỏi đáp AI & Đặt nhiều câu hỏi liên tiếp về cùng một ảnh, giữ ngữ cảnh hội thoại gần nhất. & \texttt{ai\_vision.py} \\
+Trợ lý giọng nói & Ghi âm câu hỏi tiếng Việt, xác nhận nhận diện rồi gửi cho Gemini; hỗ trợ lệnh thoại. & \texttt{speech.py}, \texttt{voice\_commands.py} \\
+Camera & Chụp ảnh theo thao tác chủ động của người dùng rồi phân tích; không truyền video trực tiếp. & \texttt{st.camera\_input} \\
+Lịch sử & Xem lại các lần phân tích, đánh dấu và lọc mục yêu thích, xoá có xác nhận. & \texttt{utils.py}, \texttt{history.json} \\
+Thống kê & Tổng hợp số lần phân tích, số lần có cảnh báo, số lần OCR, nhận diện tiền và phân bố theo chế độ. & \texttt{app.py} \\
+Cài đặt & Bật/tắt nút đọc kết quả, chọn mức chi tiết Thấp/Vừa/Cao, chọn giọng đọc, kiểm tra kết nối Gemini. & \texttt{ai\_vision.py}, \texttt{speech.py} \\
+Hướng dẫn & Trình bày cách dùng các công cụ và lưu ý an toàn khi sử dụng. & \texttt{app.py} \\
+\bottomrule
+\end{tabular*}
+\end{table}
+
+Robot Vision là thành phần web riêng (\texttt{ui/vision\_robot/index.html}) nhận
+trạng thái và lời thoại từ \texttt{app.py}. Hình~\ref{fig:robot-trangthai}
+gồm bốn ảnh người dùng cung cấp để minh hoạ trạng thái \texttt{focused},
+\texttt{excited}, \texttt{concerned} và \texttt{empathetic}; các trạng thái này có
+trong mã nguồn. Ảnh robot minh hoạ trạng thái giao diện, không phải ảnh chụp
+một phiên phân tích Gemini cụ thể.
+
+\begin{figure}[H]
+\centering
+\begin{minipage}[t]{0.485\textwidth}
+\centering
+\includegraphics[width=\linewidth]{ui-robot-tap-trung.png}\\[3pt]
+{\small\textbf{(a)} Tập trung (\texttt{focused}): đang phân tích ảnh}
+\end{minipage}\hfill
+\begin{minipage}[t]{0.485\textwidth}
+\centering
+\includegraphics[width=\linewidth]{ui-robot-hao-hung.png}\\[3pt]
+{\small\textbf{(b)} Hào hứng (\texttt{excited}): phân tích xong}
+\end{minipage}
+
+\vspace{0.8em}
+\begin{minipage}[t]{0.485\textwidth}
+\centering
+\includegraphics[width=\linewidth]{ui-robot-lo-lang.png}\\[3pt]
+{\small\textbf{(c)} Lo lắng (\texttt{concerned}): có nguy cơ mức cao}
+\end{minipage}\hfill
+\begin{minipage}[t]{0.485\textwidth}
+\centering
+\includegraphics[width=\linewidth]{ui-robot-dong-cam.png}\\[3pt]
+{\small\textbf{(d)} Đồng cảm (\texttt{empathetic}): độ tin cậy không xác định}
+\end{minipage}
+\caption[Robot Vision ở bốn trạng thái biểu cảm]{Ảnh minh hoạ do người dùng cung cấp cho bốn trạng thái robot Vision được hỗ trợ trong source.}
+\label{fig:robot-trangthai}
+\end{figure}
+
+Ngoài các trang chức năng, giao diện có nhóm công cụ trợ năng và điều khiển bổ
+trợ như Bảng~\ref{tab:congcu-trogiup}. Nhóm này giúp người dùng nghe kết quả,
+điều khiển bằng giọng nói và quản lý phiên làm việc. Các công cụ chỉ hỗ trợ
+tiếp cận thông tin; cảnh báo an toàn vẫn dựa trên ảnh tĩnh và không thay thế
+thiết bị hỗ trợ di chuyển đã được kiểm chứng.
+
+\begin{table}[H]
+\centering
+\small\linespread{1.05}\selectfont
+\caption{Công cụ trợ năng và điều khiển bổ trợ trên giao diện.}
+\label{tab:congcu-trogiup}
+\begin{tabular*}{\textwidth}{@{\extracolsep{\fill}}>{\raggedright\arraybackslash\bfseries\color{daunavy}}p{3.3cm} >{\raggedright\arraybackslash}p{3.0cm} >{\raggedright\arraybackslash}p{8.0cm}}
+\toprule
+\rowcolor{gray100}
+Công cụ & Vị trí & Tác dụng \\
+\midrule
+Chế độ trợ năng & Thanh bên & Tăng cỡ chữ và nút, làm rõ viền focus khi dùng bàn phím. \\
+Bật giọng nói & Thanh bên, Cài đặt & Bật/tắt các nút đọc kết quả thành tiếng. \\
+Trò chuyện với Vision & Thanh bên, robot & Mở khung chat Vision để hỏi theo ngữ cảnh trang và ảnh gần nhất, bằng chữ hoặc ghi âm. \\
+Nghe kết quả, nghe cảnh báo & Sau khi phân tích & Đọc cảnh báo trước, rồi đến phần mô tả và các nội dung còn lại. \\
+Tìm một vật trong ảnh & Sau khi phân tích & Nhập tên vật cần tìm; Vision trả lời theo ảnh hiện có, kết quả không phải định vị chính xác. \\
+Lệnh giọng nói & Trợ lý giọng nói & Điều hướng trang (``mở camera'', ``mở OCR''), ``tìm cái cốc'', ``đọc lại kết quả'', ``trợ giúp''; chỉ xử lý sau khi người dùng ghi âm và bấm nhận diện. \\
+Xuất báo cáo TXT & Sau khi phân tích & Tải tệp TXT gồm mô tả, vật thể, cảnh báo, OCR, tiền, gợi ý và điều hướng. \\
+Kiểm tra kết nối Gemini & Cài đặt & Gửi một yêu cầu nhỏ để xác nhận khoá và quyền truy cập model. \\
+Xoá phiên hiện tại & Thanh bên & Xoá kết quả, ảnh và hội thoại đang giữ trong phiên. \\
+\bottomrule
+\end{tabular*}
+\end{table}
+
+\section{Kết quả chạy thử và minh chứng}
+
+Các ảnh dưới đây được chụp từ những lần chạy giao diện thực tế. Với ảnh tiền,
+Gemini hiển thị kết quả nhận diện tờ 200.000 đồng, nhưng bản ghi lịch sử của
+lượt này vẫn có \texttt{money.detected = false}. Trang Thống kê hiện báo một
+lượt nhận diện tiền; đối chiếu lịch sử cho thấy lượt đó đến từ OCR cục bộ đọc
+sai văn bản trên tờ tiền, không phải kết quả Gemini. Vì vậy, chỉ số này chưa
+đáng tin cậy. Kết quả hỗ trợ di chuyển chỉ dựa trên ảnh tĩnh và không phải
+chỉ dẫn an toàn để sử dụng ngoài đời.
+
+\begin{figure}[H]
+\centering
+\begin{minipage}[t]{0.485\textwidth}
+\centering
+\includegraphics[width=\linewidth]{screenshot-gemini-nhan-dien-tien.png}\\[3pt]
+{\small (a) Lần chạy chế độ nhận diện tiền Việt.}
+\end{minipage}\hfill
+\begin{minipage}[t]{0.485\textwidth}
+\centering
+\includegraphics[width=\linewidth]{screenshot-gemini-ho-tro-di-chuyen.png}\\[3pt]
+{\small (b) Cảnh báo từ ảnh giao thông tĩnh.}
+\end{minipage}
+\caption{Ảnh chụp các lần phân tích ảnh bằng Gemini.}
+\label{fig:gemini-thucte}
+\end{figure}
+
+Ảnh phong cảnh dùng cho hai chế độ dưới đây được lấy từ Wikimedia Commons;
+tác giả là Acroterion, giấy phép CC BY-SA 4.0
+(\url{https://commons.wikimedia.org/wiki/File:Catoctin_Mountain_and_farm_MD1.jpg}).
+
+\begin{figure}[H]
+\centering
+\begin{minipage}[t]{0.485\textwidth}
+\centering
+\includegraphics[width=\linewidth]{screenshot-gemini-mo-ta-toan-canh.png}\\[3pt]
+{\small (a) Mô tả toàn cảnh phong cảnh.}
+\end{minipage}\hfill
+\begin{minipage}[t]{0.485\textwidth}
+\centering
+\includegraphics[width=\linewidth]{screenshot-gemini-nhan-biet-vat-the.png}\\[3pt]
+{\small (b) Nhận biết vật thể và vị trí tương đối.}
+\end{minipage}
+\caption{Hai chế độ Vision chạy trên ảnh phong cảnh công khai; vị trí là mô tả tương đối trong ảnh, không phải định vị chính xác.}
+\label{fig:mota-vatthe}
+\end{figure}
+
+Trong thử nghiệm hỏi đáp và tìm vật, mô hình trả về JSON thô ở giao diện.
+Đây là vấn đề định dạng đầu ra quan sát được trong lần chạy thử, không phải
+lỗi kết nối Gemini. Chức năng TTS đã tạo được trình phát âm thanh; camera và
+STT mới được kiểm tra ở mức giao diện, chưa thử bằng thiết bị camera hoặc
+microphone thực.
+
+\begin{figure}[H]
+\centering
+\begin{minipage}[t]{0.485\textwidth}
+\centering
+\includegraphics[width=\linewidth]{screenshot-gemini-hoi-dap-anh.png}\\[3pt]
+{\small (a) Hỏi đáp ảnh; nội dung trả về đang ở dạng JSON.}
+\end{minipage}\hfill
+\begin{minipage}[t]{0.485\textwidth}
+\centering
+\includegraphics[width=\linewidth]{screenshot-tim-vat-trong-anh.png}\\[3pt]
+{\small (b) Giao diện tìm vật trong ảnh.}
+\end{minipage}
+\caption{Minh chứng giao diện hỏi đáp ảnh và tìm vật.}
+\label{fig:hoidap-timvat}
+\end{figure}
+
+\begin{figure}[H]
+\centering
+\begin{minipage}[t]{0.485\textwidth}
+\centering
+\includegraphics[width=\linewidth]{screenshot-ocr-result-vie.png}\\[3pt]
+{\small (a) OCR cục bộ với dữ liệu tiếng Việt tạm thời; kết quả còn sai.}
+\end{minipage}\hfill
+\begin{minipage}[t]{0.485\textwidth}
+\centering
+\includegraphics[width=\linewidth]{screenshot-thong-ke.png}\\[3pt]
+{\small (b) Trang thống kê sau các lần chạy thử.}
+\end{minipage}
+\caption{Kết quả OCR cục bộ và thống kê; chỉ số nhận diện tiền chưa khớp bản ghi phân tích.}
+\label{fig:ocr-thongke}
+\end{figure}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.68\textwidth]{screenshot-gemini-ho-tro-khiem-thi.png}
+\caption{Chế độ hỗ trợ người khiếm thị đọc nội dung tờ tiền bằng Gemini; phản hồi chỉ là kết quả của một ảnh thử.}
+\label{fig:hotro-khiemthi}
+\end{figure}
+
+\begin{figure}[H]
+\centering
+\begin{minipage}[t]{0.485\textwidth}
+\centering
+\includegraphics[width=\linewidth]{screenshot-tts-giong-doc.png}\\[3pt]
+{\small (a) Trình phát TTS được tạo sau thao tác đọc.}
+\end{minipage}\hfill
+\begin{minipage}[t]{0.485\textwidth}
+\centering
+\includegraphics[width=\linewidth]{screenshot-lich-su-phan-tich.png}\\[3pt]
+{\small (b) Trang lịch sử phân tích.}
+\end{minipage}
+\caption{Minh chứng TTS và trang lịch sử của ứng dụng.}
+\label{fig:tts-lichsu}
+\end{figure}
+
+\begin{figure}[H]
+\centering
+\begin{minipage}[t]{0.485\textwidth}
+\centering
+\includegraphics[width=\linewidth]{screenshot-giao-dien-camera.png}\\[3pt]
+{\small (a) Giao diện camera; chưa xác nhận chụp bằng phần cứng.}
+\end{minipage}\hfill
+\begin{minipage}[t]{0.485\textwidth}
+\centering
+\includegraphics[width=\linewidth]{screenshot-giao-dien-tro-ly-giong-noi.png}\\[3pt]
+{\small (b) Giao diện trợ lý giọng nói; chưa thử micro thật.}
+\end{minipage}
+\caption{Hai giao diện cần thiết bị ngoại vi để kiểm thử đầy đủ.}
+\label{fig:camera-stt-ui}
+\end{figure}
+
+\begin{figure}[H]
+\centering
+\begin{minipage}[t]{0.485\textwidth}
+\centering
+\includegraphics[width=\linewidth]{screenshot-cai-dat-visionai.png}\\[3pt]
+{\small (a) Tuỳ chọn trợ năng, mức chi tiết và giọng đọc.}
+\end{minipage}\hfill
+\begin{minipage}[t]{0.485\textwidth}
+\centering
+\includegraphics[width=\linewidth]{screenshot-huong-dan-visionai.png}\\[3pt]
+{\small (b) Trang hướng dẫn sử dụng.}
+\end{minipage}
+\caption{Minh chứng giao diện cài đặt và hướng dẫn.}
+\label{fig:cai-dat-huongdan}
+\end{figure}
+
+\section{Kiểm thử hệ thống}
+
+Source có bộ kiểm thử cục bộ \texttt{tests/test\_core.py}. Trong lần kiểm tra
+bộ source bàn giao bằng Python 3.13.15, lệnh
+\texttt{python -m unittest discover -s tests -v} đạt 15/15 ca; ứng dụng
+Streamlit khởi động và endpoint health trả \texttt{ok}. Giao diện đã được
+kiểm tra thủ công với một số luồng chức năng; kết quả chạy Gemini, OCR và TTS
+được trình bày ở trên. Các kiểm thử unit không gọi Gemini thật, không đo độ
+chính xác mô hình và không thay thế đánh giá người dùng.
+
+\begin{table}[H]
+\centering
+\small
+\caption{Mười lăm kiểm thử unit có trong \texttt{tests/test\_core.py}.}
+\label{tab:kiemthu}
+\begin{tabular*}{\textwidth}{@{\extracolsep{\fill}}>{\bfseries\color{daunavy}}p{0.8cm} p{7.0cm} p{6.0cm}}
+\toprule
+\rowcolor{gray100}
+Mã & Hành vi được kiểm tra & Kết quả mong đợi trong test \\
+\midrule
+UT01 & Chuẩn hoá ảnh PNG thành data URL JPEG & URL kết quả có MIME type JPEG. \\
+UT02 & Từ chối dữ liệu không phải ảnh & Phát sinh \texttt{ValueError}. \\
+UT03 & Từ chối tệp ảnh rỗng & Phát sinh \texttt{ValueError}. \\
+UT04 & Lưu 105 mục lịch sử & JSON hợp lệ, giữ tối đa 100 mục mới nhất. \\
+UT05 & Tạo câu trả lời với ngữ cảnh trang/hội thoại & Prompt mock chứa câu hỏi và ngữ cảnh; hàm trả lời đúng. \\
+UT06 & Từ chối câu hỏi Vision rỗng & Phát sinh lỗi trước khi gọi Gemini. \\
+UT07 & Gửi ảnh kèm câu hỏi Vision & Request mock có cả phần văn bản và ảnh. \\
+UT08 & Tạo lời đọc cho hỗ trợ di chuyển & Có lưu ý ảnh tĩnh và nội dung điều hướng. \\
+UT09 & Tạo lời đọc kết quả có cảnh báo/OCR & Bao gồm nguy cơ, văn bản, gợi ý và cảnh báo. \\
+UT10 & Tạo lời đọc nhiều dòng OCR & Giữ thứ tự dòng và bỏ qua dòng trống. \\
+UT11 & Tập trạng thái robot & Bao gồm các trạng thái trợ năng bổ sung. \\
+UT12 & Phân tích lệnh thoại & Nhận điều hướng/tìm vật/đọc lại; câu hỏi thường không thành lệnh. \\
+UT13 & Tạo chỉ dẫn mô tả ưu tiên an toàn & Prompt có lưu ý ảnh tĩnh và không khẳng định an toàn. \\
+UT14 & Cập nhật yêu thích & Trạng thái lưu lại và khóa định danh mục không đổi. \\
+UT15 & Chọn giọng Edge TTS & Dùng giọng được yêu cầu, không đổi giọng mặc định. \\
+\bottomrule
+\end{tabular*}
+\end{table}
+
+Bảng~\ref{tab:kiemthu} ghi lại phạm vi các unit test đã chạy. Những test gửi
+yêu cầu Gemini dùng client giả lập; kiểm thử này không xác nhận API Gemini,
+Tesseract, thiết bị camera/micro hay dịch vụ TTS thực tế.
+
+\section{Đánh giá bước đầu}
+
+Phiên bản source đã có chuỗi chức năng chính từ nhận ảnh/âm thanh, phân tích,
+chuẩn hoá kết quả đến phản hồi và lưu lịch sử. Kết quả 15/15 chỉ xác nhận các
+kiểm thử phần mềm cục bộ đã viết; việc đánh giá định lượng độ chính xác OCR,
+Vision, STT, độ trễ và mức độ phù hợp với người dùng thực tế cần bộ dữ liệu,
+kịch bản riêng và kiểm thử có sự tham gia của người dùng.

@@ -1,0 +1,98 @@
+%% ---------------------------------------------------------------------
+%  CHƯƠNG 5 — KẾT QUẢ VÀ ĐÁNH GIÁ
+% ---------------------------------------------------------------------
+\chapter{Kết quả và đánh giá}
+\label{ch:ketqua}
+
+\begin{muctieu}
+Chương này tổng hợp chức năng của source VisionAI Pro và kết quả kiểm tra
+đã thực hiện. Kiểm thử phần mềm được tách biệt với đánh giá độ chính xác,
+độ trễ và mức độ an toàn của mô hình AI.
+\end{muctieu}
+
+\section{Kết quả đạt được}
+
+Qua đối chiếu mã nguồn và chạy thử ứng dụng, các chức năng hiện có gồm:
+\begin{itemize}[leftmargin=1.6em, itemsep=2pt]
+  \item Giao diện Streamlit có 11 trang, robot Vision đồ hoạ tương tác và lối tắt tới các công cụ chính.
+  \item Phân tích ảnh bằng Gemini theo danh sách model cấu hình được; hỗ trợ mô tả cảnh, vật thể, nguy cơ, hỗ trợ di chuyển và nhận diện tiền. Khi Gemini không khả dụng, source thử OCR cục bộ và cảnh báo rằng không phân tích được cảnh/vật thể.
+  \item OCR tiếng Việt/Anh bằng Tesseract cục bộ; không cần gọi Gemini cho chế độ OCR.
+  \item Chuẩn hoá ảnh đầu vào: giới hạn 15 MB, kiểm tra ảnh hợp lệ, sửa hướng EXIF, đổi RGB, thu nhỏ tối đa 1600 pixel và nén JPEG.
+  \item Escape nội dung do AI tạo trước khi chèn vào HTML và hiển thị lỗi ảnh/dịch vụ bằng thông báo dễ hiểu.
+  \item Hỏi đáp theo ảnh gần nhất, hỏi đáp trong khung chat Vision theo ngữ cảnh trang, tìm một vật trong ảnh và lệnh thoại điều hướng/đọc lại.
+  \item Nhận dạng giọng nói qua SpeechRecognition/Google Web Speech sau khi người dùng ghi âm và xác nhận; Edge TTS và Windows SAPI5/pyttsx3 đọc kết quả.
+  \item Chế độ trợ năng, lựa chọn giọng đọc, mức chi tiết, kiểm tra kết nối Gemini, lịch sử có lọc/yêu thích/xoá xác nhận, thống kê và xuất TXT.
+  \item Lịch sử cục bộ được giới hạn 100 bản ghi và ghi theo cách thay thế tệp nguyên tử.
+\end{itemize}
+
+\section{Kết quả kiểm thử thực tế}
+
+\begin{table}[H]
+\centering
+\caption{Kết quả kiểm tra phiên bản source trong môi trường hiện có.}
+\label{tab:ketqua}
+\begin{tabular*}{\textwidth}{@{\extracolsep{\fill}}>{\bfseries\color{daunavy}}p{3.1cm} p{5.5cm} p{5.1cm}}
+\toprule
+\rowcolor{gray100}
+Hạng mục & Cách kiểm tra & Kết quả \\
+\midrule
+Kiểm thử đơn vị & Python 3.13.15; chạy \texttt{python -m unittest discover -s tests -v} trên source bàn giao & 15/15 kiểm thử đạt. \\
+Khởi chạy ứng dụng & Chạy Streamlit từ source bàn giao & Máy chủ khởi động; endpoint kiểm tra sức khoẻ trả về \texttt{ok}. \\
+Giao diện & Chạy thủ công một số luồng trên trình duyệt, gồm ảnh, OCR, hỏi đáp, lịch sử và thống kê & Các trang đã mở được; camera và STT chưa thử bằng thiết bị thật. \\
+Gemini API thật & Kiểm tra kết nối và phân tích ảnh tiền, ảnh giao thông bằng \texttt{gemini-3.5-flash-lite} & Kết nối thành công; ảnh tiền được mô tả là 200.000 đồng (0,98), ảnh giao thông có cảnh báo nguy cơ cao (0,90). \\
+Hỏi đáp/tìm vật & Gửi câu hỏi theo ảnh và yêu cầu tìm vật & Gemini phản hồi; giao diện hiển thị JSON thô thay vì câu trả lời tự nhiên. \\
+OCR cục bộ & Chạy Tesseract trên ảnh tờ tiền mẫu & Có kết quả nhưng nhiều chữ tiếng Việt sai; máy thiếu dữ liệu \texttt{vie.traineddata}. \\
+TTS & Yêu cầu đọc kết quả trong ứng dụng & Tạo được trình phát âm thanh; chưa đánh giá chất lượng giọng trên thiết bị người dùng. \\
+Camera/STT & Mở các trang camera và trợ lý giọng nói & Chưa kiểm tra chụp ảnh bằng camera thật hoặc ghi âm bằng microphone thật. \\
+Độ chính xác/độ trễ & Chưa có bộ dữ liệu gán nhãn và phép đo chuyên biệt & Chưa có số liệu; không suy luận từ số ca unit test. \\
+\bottomrule
+\end{tabular*}
+\end{table}
+
+Bảng~\ref{tab:ketqua} phân biệt unit test với các lần chạy dịch vụ thật; không
+diễn giải 15/15 unit test thành độ chính xác của mô hình AI. Các unit test
+bao phủ chuẩn hoá và từ chối ảnh lỗi, lưu lịch sử/đánh dấu yêu thích, tạo nội
+dung đọc thành tiếng, trạng thái robot, lệnh thoại và cách tạo yêu cầu Gemini.
+Các lần gọi Gemini xác nhận được một số luồng trên hai ảnh mẫu, nhưng không
+đủ để khái quát chất lượng. OCR cục bộ cho kết quả tiếng Việt kém trong cấu
+hình máy hiện tại vì thiếu dữ liệu \texttt{vie}; TTS tạo được trình phát.
+Camera và STT chưa được thử bằng phần cứng thật. Bản ghi nhận diện tờ tiền
+có mô tả 200.000 đồng nhưng trường \texttt{money.detected} là false, nên
+chỉ số nhận diện tiền trong trang Thống kê không tăng.
+
+\section{Bàn luận}
+
+Ứng dụng kết hợp dịch vụ AI trực tuyến với xử lý cục bộ có phạm vi rõ ràng:
+Gemini thực hiện phân tích thị giác và hỏi đáp; Tesseract đảm nhiệm OCR khi
+được chọn; Google Web Speech nhận dạng âm thanh; Edge TTS tạo giọng đọc và
+Windows SAPI5 là phương án dự phòng. Vì vậy, không nên mô tả STT hiện tại là
+chạy cục bộ. Chế độ trợ năng, robot Vision và lệnh thoại tạo thêm cách tương
+tác, nhưng người dùng vẫn cần điều khiển giao diện và chủ động xác nhận thu âm.
+
+Các biện pháp giới hạn kích thước, chuẩn hoá ảnh, ghi lịch sử nguyên tử,
+thử model theo danh sách và xử lý lỗi giúp tăng tính bền vững của nguyên mẫu.
+Tuy vậy, các biện pháp này không chứng minh độ chính xác của AI. Đặc biệt,
+kết quả không phát hiện nguy cơ không đồng nghĩa môi trường an toàn; hỗ trợ
+di chuyển chỉ dựa trên một ảnh tĩnh.
+
+\section{Hạn chế}
+
+\begin{itemize}[leftmargin=1.6em, itemsep=2pt]
+  \item Gemini cần API key, kết nối mạng và hạn mức phù hợp; danh sách model dự phòng không khắc phục được khoá sai hoặc mất mạng.
+  \item STT sử dụng Google Web Speech và cần Internet; Edge TTS cũng cần mạng. Windows SAPI5 chỉ là phương án TTS dự phòng.
+  \item Tesseract và dữ liệu ngôn ngữ \texttt{vie}/\texttt{eng} cần được cài đặt riêng.
+  \item Camera chỉ chụp ảnh theo thao tác người dùng; hỗ trợ di chuyển không theo dõi video, không đo khoảng cách và không thay thế gậy, chó dẫn đường hay thiết bị đã được kiểm chứng.
+  \item Robot là đồ hoạ CSS/SVG tạo cảm giác chuyển động, không phải mô hình 3D có thể xoay; hoạt ảnh không đồng bộ khẩu hình với tiếng nói.
+  \item Giọng nói theo luồng ghi âm--chuyển văn bản--gửi Gemini--đọc phản hồi, chưa phải hội thoại âm thanh thời gian thực.
+  \item Cá nhân hoá giới hạn ở trạng thái phiên; không có tài khoản, hồ sơ người dùng lâu dài, cơ sở dữ liệu hoặc cấu hình production nhiều người dùng.
+  \item Lịch sử lưu cục bộ tối đa 100 bản ghi; chưa có bộ dữ liệu để đo độ chính xác, độ trễ hoặc đánh giá có người dùng.
+\end{itemize}
+
+\section{Kết luận đánh giá}
+
+Trên source bàn giao, ứng dụng khởi chạy, health check đạt và bộ kiểm thử
+cục bộ đạt 15/15; kết nối Gemini, hai lần phân tích ảnh và TTS cũng đã chạy
+được trong các thử nghiệm nêu trên. Những lần chạy này không xác nhận chất
+lượng nhận diện tổng quát hay tính an toàn khi sử dụng. Cần cài đủ dữ liệu
+OCR tiếng Việt, kiểm thử camera/STT trên thiết bị phù hợp và xây dựng bộ dữ
+liệu có nhãn trước khi đưa ra kết luận định lượng.

@@ -1,0 +1,99 @@
+% ---------------------------------------------------------------------
+%  CHƯƠNG 1 — MỞ ĐẦU
+% ---------------------------------------------------------------------
+\chapter{Mở đầu}
+\label{ch:modau}
+
+\begin{muctieu}
+Chương mở đầu trình bày bối cảnh, lý do lựa chọn đề tài, mục tiêu, phạm vi
+và đối tượng thực hiện của đồ án. Nội dung chương nhằm làm rõ nhu cầu xây
+dựng một trợ lý AI có khả năng cá nhân hoá để hỗ trợ người khiếm thị trong
+quá trình tiếp cận thông tin, nhận diện không gian/vật thể và tương tác với hệ thống.
+\end{muctieu}
+
+\section{Lý do chọn đề tài}
+
+Trong quá trình phát triển của trí tuệ nhân tạo, các trợ lý AI ngày càng
+được ứng dụng rộng rãi để hỗ trợ con người trong việc tìm kiếm thông tin,
+giao tiếp và thực hiện các tác vụ hằng ngày. Tuy nhiên, phần lớn các trợ lý
+AI hiện nay được thiết kế theo hướng phục vụ người dùng nói chung, chủ yếu dựa
+trên giao diện trực quan và hình ảnh, chưa tập trung đầy đủ vào nhu cầu tiếp
+cận thông tin và tương tác bằng âm thanh/giọng nói của người khiếm thị.
+
+Người khiếm thị gặp rất nhiều khó khăn trong các tình huống giao tiếp và sinh
+hoạt hằng ngày vốn phụ thuộc vào thị giác, chẳng hạn như đọc tài liệu văn bản,
+nhận diện các vật thể xung quanh, quan sát biển hiệu hay di chuyển trong môi
+trường lạ. Vì vậy, một hệ thống hỗ trợ dựa trên trí tuệ nhân tạo có khả năng
+chuyển đổi thông tin thị giác thành âm thanh/lời nói hoặc phản hồi thông minh
+qua giọng nói có thể giúp giảm bớt những trở ngại trong quá trình tiếp cận công nghệ
+và hòa nhập cộng đồng~\cite{WHO2019WorldVision,WHO2022AssistiveTech}.
+
+Bên cạnh khả năng cung cấp và hỗ trợ xử lý thông tin, khả năng điều chỉnh cách
+tương tác cũng có ý nghĩa quan trọng. Mỗi người dùng khiếm thị có thể có nhu cầu
+khác nhau về cỡ chữ, thao tác, giọng đọc và mức độ chi tiết. Trong phạm vi
+nguyên mẫu này, các lựa chọn được áp dụng trong phiên làm việc; hệ thống chưa
+lưu hồ sơ cá nhân lâu dài.
+
+Xuất phát từ những vấn đề trên, đồ án lựa chọn đề tài ``Xây dựng trợ lý AI
+cá nhân hoá hỗ trợ người khiếm thị'' nhằm nghiên cứu khả năng ứng dụng
+trí tuệ nhân tạo vào một bài toán có tính thực tiễn cao, hướng đến việc gia tăng
+khả năng tiếp cận công nghệ và nâng cao chất lượng cuộc sống cho người dùng có
+nhu cầu đặc thù.
+
+\section{Mục tiêu của đồ án}
+
+Đồ án hướng tới các mục tiêu sau:
+\begin{itemize}[leftmargin=1.6em, itemsep=2pt]
+  \item Phân tích nhu cầu và các khó khăn trong quá trình tiếp cận thông tin,
+        quan sát và tương tác với trợ lý AI của người khiếm thị.
+        
+  \item Xây dựng một trợ lý AI có khả năng tiếp nhận yêu cầu bằng giọng nói
+        hoặc dữ liệu đầu vào (văn bản, hình ảnh), xử lý nội dung và đưa ra
+        phản hồi bằng âm thanh/giọng nói phù hợp.
+        
+  \item Bổ sung tuỳ chọn tương tác trong phiên như chế độ trợ năng, giọng đọc,
+        mức chi tiết và ngữ cảnh hội thoại; không đặt mục tiêu xây dựng hồ sơ
+        người dùng lâu dài trong phiên bản này.
+        
+  \item Thiết kế giao diện dễ tiếp cận với chế độ chữ/nút lớn, focus bàn phím,
+        robot hướng dẫn và khả năng nghe kết quả bằng giọng đọc.
+        
+  \item Kiểm thử các chức năng phần mềm đã xây dựng; xác định dữ liệu và phương pháp
+        cần có để đánh giá riêng độ chính xác, độ trễ và mức độ đáp ứng bài toán.
+\end{itemize}
+
+\section{Phạm vi và đối tượng}
+
+Đồ án tập trung xây dựng một nguyên mẫu trợ lý thị giác AI hướng đến hỗ trợ
+người khiếm thị tiếp nhận thông tin trong ảnh, đọc văn bản và tương tác với
+trợ lý bằng tiếng Việt. Đối tượng hướng đến là người mù hoặc người có thị lực
+kém cần công cụ hỗ trợ đọc và nhận biết thông tin môi trường.
+
+Phạm vi của đồ án tập trung vào nguyên mẫu Streamlit gồm phân tích ảnh Gemini,
+OCR cục bộ bằng Tesseract, hỏi đáp theo ảnh, lệnh thoại, đọc phản hồi và các
+tuỳ chọn trợ năng. STT sử dụng Google Web Speech qua Internet; TTS ưu tiên
+Edge TTS và có Windows SAPI5 dự phòng. Các tuỳ chọn cá nhân hoá chỉ tồn tại
+trong phiên làm việc, không gồm tài khoản hoặc hồ sơ lâu dài.
+
+Đồ án không hướng tới việc thay thế hoàn toàn các công cụ hỗ trợ di chuyển chuyên dụng
+(như gậy trắng, chó dẫn đường) hay các thiết bị y tế chuyên khoa, không giải quyết
+toàn bộ các vấn đề y tế liên quan đến thị giác và chưa đặt mục tiêu triển khai hệ thống
+ở quy mô thương mại/sản xuất lớn. Các chức năng và phạm vi hỗ trợ cụ thể được giới hạn
+theo thời gian và nguồn lực thực hiện đồ án.
+
+\begin{luuy}
+Phạm vi của đồ án được giới hạn ở việc xây dựng và đánh giá một nguyên mẫu
+trợ lý AI cá nhân hoá hỗ trợ người khiếm thị. Việc giới hạn phạm vi giúp
+tập trung vào các chức năng cốt lõi, bảo đảm hệ thống có thể được triển khai,
+kiểm thử và đánh giá trong thời gian thực hiện đồ án.
+\end{luuy}
+
+\section{Bố cục báo cáo}
+
+Phần còn lại của báo cáo được tổ chức như sau. Chương~\ref{ch:coso} trình
+bày cơ sở lý thuyết và các công nghệ được sử dụng trong quá trình xây dựng
+trợ lý AI. Chương~\ref{ch:thietke} phân tích bài toán, yêu cầu hệ thống và
+thiết kế giải pháp. Chương~\ref{ch:caidat} mô tả quá trình cài đặt và xây
+dựng các chức năng của hệ thống. Chương~\ref{ch:ketqua} trình bày kết quả
+thực nghiệm và đánh giá hệ thống. Chương~\ref{ch:ketluan} tổng kết những
+kết quả đạt được, các hạn chế và hướng phát triển của đề tài.
