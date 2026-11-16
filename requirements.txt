@@ -1,0 +1,8 @@
+streamlit>=1.50,<2.0
+google-genai>=1.30.0,<2.0
+python-dotenv>=1.0.0,<2.0
+Pillow>=10.0.0,<13.0
+edge-tts>=7.0.0,<9.0
+pyttsx3>=2.98
+SpeechRecognition>=3.10,<4.0
+pytesseract>=0.3.13,<0.4
