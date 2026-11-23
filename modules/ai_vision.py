@@ -320,18 +320,12 @@ def ask_about_image(data_url, question, conversation=None):
 Câu hỏi: {question}
 {context}
 Trả lời trực tiếp, dễ nghe, ưu tiên thông tin hữu ích và an toàn. Không bịa.
+Nếu câu hỏi yêu cầu tìm hoặc liệt kê nhiều vật thể, hãy ghi từng vật thể nhận diện được thành một mục riêng trong objects, kèm vị trí tương đối và dấu hiệu nhận biết; không gộp danh sách thành phần tóm tắt.
+Nếu không thể nhận diện đủ số lượng được yêu cầu, hãy liệt kê những vật thể thực sự nhìn thấy và nói rõ phần nào chưa chắc chắn.
 Nếu không xác định được từ ảnh, hãy nói rõ."""
     raw, mime = _decode_data_url(data_url)
-    assistant_instruction = (
-        "Bạn là trợ lý thị giác thân thiện, hỗ trợ người dùng bằng tiếng Việt tự nhiên. "
-        "Trả lời trực tiếp bằng một vài câu ngắn, dễ hiểu và dễ nghe. "
-        "Không trả JSON, mã nguồn, tên trường dữ liệu hoặc định dạng kỹ thuật. "
-        "Chỉ mô tả điều có thể quan sát trong ảnh; nếu không chắc hoặc không thấy, hãy nói rõ. "
-        "Không khẳng định thông tin ảnh hưởng đến an toàn nếu ảnh không đủ cơ sở."
-    )
     response, _model = _call_with_fallback(lambda client, model: _generate(
-        client, model, prompt, raw=raw, mime_type=mime, json_mode=False,
-        system_instruction=assistant_instruction))
+        client, model, prompt, raw=raw, mime_type=mime, json_mode=False))
     return _format_image_answer(getattr(response, "text", ""))
 
 
