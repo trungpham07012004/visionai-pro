@@ -39,68 +39,6 @@ text_detected phải là mảng object gồm text, location, confidence.
 Không trả OCR dưới dạng chuỗi chứa JSON. Nếu không đọc được chữ, trả [].
 """
 
-# Prompt cho các câu hỏi đáp tự do: KHÔNG yêu cầu JSON.
-CHAT_SYSTEM_PROMPT = """
-Bạn là Trợ lý thị giác AI hỗ trợ người khiếm thị.
-Trả lời bằng tiếng Việt tự nhiên, ngắn gọn, dễ nghe khi đọc thành tiếng.
-Chỉ dùng văn xuôi hoặc gạch đầu dòng đơn giản. TUYỆT ĐỐI không trả về JSON, không dùng khối mã.
-Chỉ nói điều có cơ sở trong ảnh; nếu không chắc chắn, hãy nói rõ. Không bảo đảm an toàn tuyệt đối.
-"""
-
-
-def _json_to_text(data, depth=0):
-    """Đổi dữ liệu JSON thành câu văn dễ đọc (dùng khi model lỡ trả JSON)."""
-    if isinstance(data, dict):
-        parts = []
-        for key, value in data.items():
-            text = _json_to_text(value, depth + 1)
-            if text:
-                parts.append(text if key in ("summary", "scene") and depth == 0 else text)
-        return "\n".join(parts) if depth == 0 else "; ".join(parts)
-    if isinstance(data, list):
-        items = [_json_to_text(x, depth + 1) for x in data]
-        items = [x for x in items if x]
-        return "\n".join(f"- {x}" for x in items) if depth == 0 else "; ".join(items)
-    if isinstance(data, bool) or data is None:
-        return ""
-    return str(data).strip()
-
-
-def _plain_text_answer(text):
-    """Nếu câu trả lời là JSON (kể cả trong ```json), chuyển thành văn bản thường."""
-    text = (text or "").strip()
-    if not text:
-        return text
-    candidate = re.sub(r"^```(?:json)?\s*|\s*```$", "", text, flags=re.IGNORECASE).strip()
-    if candidate[:1] in "{[":
-        try:
-            data = json.loads(candidate)
-        except Exception:
-            return text
-        if isinstance(data, dict):
-            lines = []
-            if data.get("summary"):
-                lines.append(str(data["summary"]).strip())
-            if data.get("scene"):
-                lines.append(str(data["scene"]).strip())
-            objs = data.get("objects")
-            if isinstance(objs, list) and objs:
-                lines.append("Các vật thể nhìn thấy:")
-                for o in objs:
-                    if isinstance(o, dict):
-                        name = o.get("name") or o.get("label") or "Vật thể"
-                        loc = o.get("location") or ""
-                        desc = o.get("description") or o.get("visual_cue") or ""
-                        lines.append("- " + name + (f" ({loc})" if loc else "") + (f": {desc}" if desc else ""))
-                    else:
-                        lines.append(f"- {o}")
-            if lines:
-                return "\n".join(lines)
-        converted = _json_to_text(data)
-        return converted or text
-    return text
-
-
 def is_api_ready():
     return bool(os.getenv("GEMINI_API_KEY", "").strip())
 
@@ -199,12 +137,7 @@ def _parse_json(text):
     result["summary"] = str(data.get("summary", "Không có mô tả.")).strip()
     result["confidence"] = str(data.get("confidence", "Không xác định")).strip()
     result["scene"] = str(data.get("scene", "")).strip()
-    raw_objects = data.get("objects", []) if isinstance(data.get("objects", []), list) else []
-    result["objects"] = [
-        {**x, "name": x.get("name") or x.get("label") or "Vật thể",
-         "description": x.get("description") or x.get("visual_cue") or ""}
-        for x in raw_objects if isinstance(x, dict)
-    ]
+    result["objects"] = [x for x in data.get("objects", []) if isinstance(x, dict)] if isinstance(data.get("objects", []), list) else []
     result["accessibility_tips"] = [str(x).strip() for x in data.get("accessibility_tips", []) if str(x).strip()] if isinstance(data.get("accessibility_tips", []), list) else []
     result["text_detected"] = _normalize_ocr(data.get("text_detected", []))
     result["hazards"] = [x for x in data.get("hazards", []) if isinstance(x, dict)] if isinstance(data.get("hazards", []), list) else []
@@ -333,11 +266,17 @@ Câu hỏi: {question}
 Trả lời trực tiếp, dễ nghe, ưu tiên thông tin hữu ích và an toàn. Không bịa.
 Nếu không xác định được từ ảnh, hãy nói rõ."""
     raw, mime = _decode_data_url(data_url)
+    assistant_instruction = (
+        "Bạn là trợ lý thị giác thân thiện, hỗ trợ người dùng bằng tiếng Việt tự nhiên. "
+        "Trả lời trực tiếp bằng một vài câu ngắn, dễ hiểu và dễ nghe. "
+        "Không trả JSON, mã nguồn, tên trường dữ liệu hoặc định dạng kỹ thuật. "
+        "Chỉ mô tả điều có thể quan sát trong ảnh; nếu không chắc hoặc không thấy, hãy nói rõ. "
+        "Không khẳng định thông tin ảnh hưởng đến an toàn nếu ảnh không đủ cơ sở."
+    )
     response, _model = _call_with_fallback(lambda client, model: _generate(
         client, model, prompt, raw=raw, mime_type=mime, json_mode=False,
-        system_instruction=CHAT_SYSTEM_PROMPT))
-    answer = _plain_text_answer(getattr(response, "text", "") or "")
-    return answer or "Gemini không trả về câu trả lời."
+        system_instruction=assistant_instruction))
+    return (getattr(response, "text", "") or "Gemini không trả về câu trả lời.").strip()
 
 
 def ask_vision_assistant(question, screen_context, conversation=None, image_data_url=None):
@@ -392,7 +331,7 @@ def ask_vision_assistant(question, screen_context, conversation=None, image_data
             system_instruction=assistant_instruction,
         )
     )
-    answer = _plain_text_answer(getattr(response, "text", "") or "")
+    answer = (getattr(response, "text", "") or "").strip()
     if not answer:
         raise RuntimeError("Gemini không trả về câu trả lời. Hãy thử gửi lại câu hỏi.")
     return answer
