@@ -152,6 +152,62 @@ def _parse_json(text):
             "confidence": str(money.get("confidence", "Không xác định")).strip()}
     return result
 
+def _format_image_answer(answer):
+    text = str(answer or "").strip()
+    if not text:
+        return "Gemini không trả về câu trả lời."
+
+    candidate = re.sub(r"^```(?:json)?\s*|\s*```$", "", text, flags=re.IGNORECASE).strip()
+    try:
+        data = json.loads(candidate)
+    except json.JSONDecodeError:
+        return text
+    if not isinstance(data, dict):
+        return text
+
+    sections = []
+    summary = str(data.get("answer") or data.get("response") or data.get("summary") or "").strip()
+    if summary:
+        sections.append(summary)
+
+    scene = str(data.get("scene") or "").strip()
+    if scene and scene.casefold() != summary.casefold():
+        sections.append(f"Bối cảnh: {scene}")
+
+    objects = data.get("objects")
+    if isinstance(objects, list):
+        object_lines = []
+        for item in objects:
+            if isinstance(item, str):
+                label = item.strip()
+                location = ""
+                description = ""
+            elif isinstance(item, dict):
+                label = str(item.get("name") or item.get("label") or item.get("item") or "Vật thể").strip()
+                location = str(item.get("location") or "").strip()
+                description = str(item.get("description") or item.get("visual_cue") or "").strip()
+            else:
+                continue
+            if not label:
+                continue
+            line = f"• {label}"
+            if location:
+                line += f" — {location}"
+            if description:
+                line += f". {description}"
+            object_lines.append(line)
+        if object_lines:
+            sections.append("Các vật thể nhận diện:\n" + "\n".join(object_lines))
+
+    warning = str(data.get("warning") or "").strip()
+    if warning:
+        sections.append(f"Lưu ý: {warning}")
+
+    return "\n\n".join(sections) if sections else (
+        "Mình chưa thể trình bày phản hồi này thành nội dung dễ đọc. "
+        "Bạn thử hỏi lại bằng câu ngắn hơn nhé."
+    )
+
 def _status_code(exc):
     """Extract an HTTP status across google-genai SDK error variants."""
     for value in (
@@ -276,7 +332,7 @@ Nếu không xác định được từ ảnh, hãy nói rõ."""
     response, _model = _call_with_fallback(lambda client, model: _generate(
         client, model, prompt, raw=raw, mime_type=mime, json_mode=False,
         system_instruction=assistant_instruction))
-    return (getattr(response, "text", "") or "Gemini không trả về câu trả lời.").strip()
+    return _format_image_answer(getattr(response, "text", ""))
 
 
 def ask_vision_assistant(question, screen_context, conversation=None, image_data_url=None):
