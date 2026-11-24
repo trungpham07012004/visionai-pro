@@ -16,13 +16,6 @@ _ALLOWED_STATES = {
     "happy",
     "helping",
     "curious",
-    "focused",
-    "surprised",
-    "confused",
-    "concerned",
-    "excited",
-    "empathetic",
-    "reassuring",
     "error",
 }
 

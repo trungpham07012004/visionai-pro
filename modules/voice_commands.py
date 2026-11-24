@@ -35,10 +35,9 @@ def parse_voice_command(text):
     if command in {"tro giup", "giup toi", "cac lenh", "huong dan lenh"}:
         return {"action": "help"}
 
-    original_words = str(text or "").strip().split()
-    for prefix, word_count in (("tim ", 1), ("hay tim ", 2), ("tim giup toi ", 3)):
+    for prefix in ("tim ", "hay tim ", "tim giup toi "):
         if command.startswith(prefix):
-            target = " ".join(original_words[word_count:]).strip(" .?!")
+            target = command[len(prefix):].strip(" .?!")
             if target:
                 return {"action": "find_object", "target": target}
 

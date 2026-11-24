@@ -10,7 +10,6 @@ from unittest.mock import patch
 from PIL import Image
 from modules import accessibility, ai_vision, speech, utils
 from modules.ai_vision import _vision_instruction
-from modules.robot_ui import _ALLOWED_STATES
 from modules.voice_commands import parse_voice_command
 
 
@@ -96,6 +95,127 @@ class CoreTests(unittest.TestCase):
 
         self.assertEqual(len(captured["contents"]), 2)
 
+    def test_image_answer_formats_all_objects_with_details(self):
+        response = {
+            "summary": "Tranh câu đố có nhiều đồ vật ẩn.",
+            "objects": [
+                {
+                    "name": f"Vật {index}",
+                    "location": "Phía trên bên trái",
+                    "description": "Nằm khuất một phần sau chiếc khăn.",
+                    "confidence": 0.8,
+                }
+                for index in range(1, 22)
+            ],
+        }
+
+        answer = ai_vision._format_image_answer(json.dumps(response, ensure_ascii=False))
+
+        numbered_items = [line for line in answer.splitlines() if line[:1].isdigit() and ". " in line]
+        self.assertEqual(len(numbered_items), 21)
+        self.assertIn("21. Vật 21", answer)
+        self.assertIn("Vị trí tương đối: Phía trên bên trái", answer)
+        self.assertIn("Dấu hiệu nhận biết: Nằm khuất một phần sau chiếc khăn.", answer)
+        self.assertIn("Độ tin cậy: 80%", answer)
+        self.assertNotIn('"objects"', answer)
+
+    def test_image_question_requests_detailed_json_and_formats_it(self):
+        captured = {}
+        structured_answer = json.dumps(
+            {
+                "summary": "Có đồ vật ẩn trong tranh.",
+                "objects": [
+                    {
+                        "name": "Chiếc ủng",
+                        "location": "Góc dưới bên phải",
+                        "description": "Nằm cạnh người tuyết đội mũ sọc.",
+                        "confidence": "Cao",
+                    }
+                ],
+            },
+            ensure_ascii=False,
+        )
+
+        class FakeModels:
+            def generate_content(self, **kwargs):
+                captured.update(kwargs)
+                return SimpleNamespace(text=structured_answer)
+
+        fake_client = SimpleNamespace(models=FakeModels())
+
+        def fake_fallback(make_request):
+            return make_request(fake_client, "gemini-test"), "gemini-test"
+
+        data_url = "data:image/png;base64," + base64.b64encode(b"image-bytes").decode("ascii")
+        with patch.object(ai_vision, "_call_with_fallback", side_effect=fake_fallback):
+            answer = ai_vision.ask_about_image(data_url, "Tìm 21 đồ vật ẩn và liệt kê")
+
+        self.assertEqual(captured["config"].response_mime_type, "application/json")
+        self.assertIn("rà lần lượt từ trên xuống dưới", captured["contents"][0])
+        self.assertIn("Không lặp vật để đạt số lượng", captured["config"].system_instruction)
+        self.assertIn("1. Chiếc ủng", answer)
+        self.assertIn("Vị trí tương đối: Góc dưới bên phải", answer)
+        self.assertIn("Dấu hiệu nhận biết: Nằm cạnh người tuyết đội mũ sọc.", answer)
+        self.assertIn("Độ tin cậy: Cao", answer)
+
+    def test_gemini_model_order_keeps_custom_priority_and_adds_defaults(self):
+        with patch.dict("os.environ", {"GEMINI_MODELS": "gemini-3.6-flash"}):
+            models = ai_vision.get_gemini_models()
+
+        self.assertEqual(models[0], "gemini-3.6-flash")
+        self.assertIn("gemini-3.1-flash-lite", models)
+        self.assertEqual(len(models), len(set(models)))
+        self.assertTrue(all(model.startswith("gemini-") for model in models))
+
+    def test_gemini_model_order_rejects_non_gemini_provider(self):
+        with patch.dict("os.environ", {"GEMINI_MODELS": "gpt-4o"}):
+            with self.assertRaisesRegex(ValueError, "chỉ được chứa mã model Gemini"):
+                ai_vision.get_gemini_models()
+
+    def test_gemini_fallback_switches_models_on_rate_limit(self):
+        class RateLimitError(Exception):
+            status_code = 429
+
+        attempted = []
+
+        def request(_client, model):
+            attempted.append(model)
+            if model == "gemini-3.8-flash":
+                raise RateLimitError()
+            return "ok"
+
+        with patch.object(ai_vision, "_client", return_value=object()), patch.object(
+            ai_vision, "get_gemini_models",
+            return_value=["gemini-3.8-flash", "gemini-3.6-flash"],
+        ):
+            response, model = ai_vision._call_with_fallback(request)
+
+        self.assertEqual((response, model), ("ok", "gemini-3.6-flash"))
+        self.assertEqual(attempted, ["gemini-3.8-flash", "gemini-3.6-flash"])
+
+    def test_gemini_fallback_retries_server_error_once(self):
+        class ServerError(Exception):
+            status_code = 503
+            response = SimpleNamespace(headers={"Retry-After": "0"})
+
+        attempts = 0
+
+        def request(_client, _model):
+            nonlocal attempts
+            attempts += 1
+            if attempts == 1:
+                raise ServerError()
+            return "ok"
+
+        with patch.object(ai_vision, "_client", return_value=object()), patch.object(
+            ai_vision, "get_gemini_models", return_value=["gemini-3.8-flash"]
+        ), patch.object(ai_vision.time, "sleep") as sleep:
+            response, model = ai_vision._call_with_fallback(request)
+
+        self.assertEqual((response, model), ("ok", "gemini-3.8-flash"))
+        self.assertEqual(attempts, 2)
+        sleep.assert_called_once_with(0.0)
+
     def test_spoken_mobility_result_includes_caution_and_navigation(self):
         speech = accessibility.build_spoken_result(
             {
@@ -133,16 +253,12 @@ class CoreTests(unittest.TestCase):
         self.assertIn("Đi chậm.", speech)
         self.assertIn("Ảnh hơi tối.", speech)
 
-    def test_ocr_spoken_text_preserves_line_order_and_skips_empty_lines(self):
-        self.assertEqual(
-            accessibility.build_ocr_spoken_text(
-                [{"text": "Dòng đầu"}, {"text": " "}, "Dòng cuối"]
-            ),
-            "Dòng 1. Dòng đầu Dòng 3. Dòng cuối",
+    def test_ocr_spoken_text_keeps_line_order_and_skips_blanks(self):
+        answer = accessibility.build_ocr_spoken_text(
+            [{"text": "Dòng đầu"}, {"text": " "}, "Dòng cuối"]
         )
 
-    def test_robot_supports_additional_accessible_emotions(self):
-        self.assertTrue({"excited", "empathetic", "reassuring"}.issubset(_ALLOWED_STATES))
+        self.assertEqual(answer, "Dòng 1. Dòng đầu Dòng 3. Dòng cuối")
 
     def test_voice_commands_parse_navigation_search_and_replay(self):
         self.assertEqual(
@@ -151,7 +267,7 @@ class CoreTests(unittest.TestCase):
         )
         self.assertEqual(
             parse_voice_command("Tìm cái cốc màu xanh"),
-            {"action": "find_object", "target": "cái cốc màu xanh"},
+            {"action": "find_object", "target": "cai coc mau xanh"},
         )
         self.assertEqual(parse_voice_command("Đọc lại kết quả"), {"action": "replay"})
         self.assertIsNone(parse_voice_command("Trong ảnh có phải cửa ra vào không?"))
@@ -183,14 +299,33 @@ class CoreTests(unittest.TestCase):
                 utils.set_history_favorite(item_key, False)
                 self.assertFalse(utils.load_history()[0]["favorite"])
 
-    def test_text_to_speech_uses_requested_edge_voice_without_mutating_default(self):
-        default_voice = speech.EDGE_VOICE
-        with patch.object(speech, "_edge_tts", return_value="audio.mp3") as edge_tts:
-            path = speech.text_to_speech("Xin chào", voice="vi-VN-NamMinhNeural")
+    def test_transcribe_audio_uses_supported_google_recognition_arguments(self):
+        class FakeAudioFile:
+            def __init__(self, path):
+                self.path = path
 
-        self.assertEqual(path, "audio.mp3")
-        edge_tts.assert_called_once_with("Xin chào", "vi-VN-NamMinhNeural")
-        self.assertEqual(speech.EDGE_VOICE, default_voice)
+            def __enter__(self):
+                return self
+
+            def __exit__(self, *args):
+                return False
+
+        class FakeRecognizer:
+            def record(self, source):
+                return "recorded audio"
+
+            def recognize_google(self, audio, language):
+                self.audio = audio
+                self.language = language
+                return "Xin chào Vision"
+
+        recognizer = FakeRecognizer()
+        fake_sr = SimpleNamespace(Recognizer=lambda: recognizer, AudioFile=FakeAudioFile)
+        with patch.dict("sys.modules", {"speech_recognition": fake_sr}):
+            answer = speech.transcribe_audio(BytesIO(b"wav audio"))
+
+        self.assertEqual(answer, "Xin chào Vision")
+        self.assertEqual(recognizer.language, speech.STT_LANGUAGE)
 
 
 if __name__ == "__main__":

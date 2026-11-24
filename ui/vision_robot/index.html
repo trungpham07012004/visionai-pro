@@ -70,6 +70,20 @@
       color: #c6d9f7;
       font: 500 clamp(10px, 1.45vw, 15px)/1.5 Arial,sans-serif;
     }
+    .hero-tags {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      margin-top: 12px;
+    }
+    .hero-tags span {
+      padding: 5px 7px;
+      border: 1px solid rgba(103,201,255,.28);
+      border-radius: 8px;
+      background: rgba(15,76,145,.26);
+      color: #9deaff;
+      font: 700 9px Arial,sans-serif;
+    }
     .hero-actions {
       position: absolute;
       z-index: 5;
@@ -190,75 +204,37 @@
       overflow: auto;
       pointer-events: none;
     }
-    .robot.wave-once #arm-wave, .robot.wave-once #mini-arm,
-    .robot.celebrate-once #arm-wave, .robot.celebrate-once #mini-arm {
-      animation: wave .48s ease-in-out 4 alternate;
-    }
+    .robot.wave-once #arm-wave, .robot.celebrate-once #arm-wave { animation: wave .48s ease-in-out 4 alternate; }
     .robot.idle .eye-open, .robot.helping .eye-open, .robot.curious .eye-open,
-    .robot.focused .eye-open, .robot.surprised .eye-open,
     .robot.listening .eye-open, .robot.speaking .eye-open { opacity: 1; }
     .robot.greeting .eye-smile, .robot.happy .eye-smile { opacity: 1; }
-    .robot.thinking .eye-half, .robot.confused .eye-half { opacity: 1; }
-    .robot.error .eye-sad, .robot.concerned .eye-sad { opacity: 1; }
+    .robot.thinking .eye-half { opacity: 1; }
+    .robot.error .eye-sad { opacity: 1; }
     .robot.idle .mouth-smile, .robot.greeting .mouth-smile, .robot.happy .mouth-smile {
       opacity: 1;
     }
     .robot.curious .mouth-curious, .robot.helping .mouth-curious,
-    .robot.listening .mouth-curious, .robot.confused .mouth-curious { opacity: 1; }
+    .robot.listening .mouth-curious { opacity: 1; }
     .robot.thinking .mouth-flat { opacity: 1; }
-    .robot.speaking .mouth-open, .robot.surprised .mouth-open { opacity: 1; }
-    .robot.error .mouth-sad, .robot.concerned .mouth-sad { opacity: 1; }
-    .robot.curious .eye-ring, .robot.helping .eye-ring, .robot.focused .eye-ring,
-    .robot.surprised .eye-ring, .robot.listening .eye-ring {
+    .robot.speaking .mouth-open { opacity: 1; }
+    .robot.error .mouth-sad { opacity: 1; }
+    .robot.curious .eye-ring, .robot.helping .eye-ring, .robot.listening .eye-ring {
       opacity: 1;
     }
     .robot.curious .brow, .robot.helping .brow, .robot.thinking .brow,
-    .robot.error .brow, .robot.focused .brow, .robot.surprised .brow,
-    .robot.confused .brow, .robot.concerned .brow { opacity: 1; }
+    .robot.error .brow { opacity: 1; }
     .robot.happy .cheek, .robot.greeting .cheek { opacity: 1; }
-    .robot.excited .eye-smile, .robot.excited .mouth-smile, .robot.excited .cheek {
-      opacity: 1;
-    }
-    .robot.empathetic .eye-sad, .robot.empathetic .mouth-sad,
-    .robot.empathetic .brow { opacity: 1; }
-    .robot.reassuring .eye-smile, .robot.reassuring .mouth-smile {
-      opacity: 1;
-    }
     .robot .eyeball { animation: blink 5.2s ease-in-out infinite; }
     .robot.idle .eye-pupil {
       animation: idle-glance 13s ease-in-out infinite;
     }
     .robot.greeting .mouth-smile, .robot.happy .mouth-smile { stroke: #70ffe2; stroke-width: 10; }
     .robot.happy .halo { background: radial-gradient(ellipse,rgba(84,255,214,.34),rgba(22,67,180,.1) 48%,transparent 73%); }
-    .robot.excited .halo { background: radial-gradient(ellipse,rgba(255,214,92,.38),rgba(22,67,180,.1) 48%,transparent 73%); }
-    .robot.excited .eyeball { transform: scale(1.14); }
-    .robot.excited .eye-smile { transform: scale(1.1); }
-    .robot.excited .mouth-smile { stroke: #ffe66d; stroke-width: 10; }
-    .robot.empathetic .halo { background: radial-gradient(ellipse,rgba(107,177,255,.32),rgba(22,67,180,.1) 48%,transparent 73%); }
-    .robot.empathetic .eye-sad, .robot.empathetic .mouth-sad { stroke: #9dcaff; }
-    .robot.empathetic .brow-left { transform: translateY(3px) rotate(12deg); }
-    .robot.empathetic .brow-right { transform: translateY(3px) rotate(-12deg); }
-    .robot.reassuring .halo { background: radial-gradient(ellipse,rgba(104,255,190,.34),rgba(22,67,180,.1) 48%,transparent 73%); }
-    .robot.reassuring .mouth-smile { stroke: #7dffc7; }
-    .robot.excited { animation: excited-bounce .55s ease-in-out 2; }
-    .robot.empathetic { --tilt: -2deg; }
-    .robot.reassuring .brow { stroke: #7dffc7; }
     .robot.curious .eyeball { transform: scale(1.08); }
     .robot.curious .eye-ring, .robot.helping .eye-ring { stroke: #a6faff; }
     .robot.curious .brow-left, .robot.helping .brow-left { transform: translateY(-4px) rotate(-8deg); }
     .robot.curious .brow-right, .robot.helping .brow-right { transform: translateY(-5px) rotate(8deg); }
     .robot.curious .halo { background: radial-gradient(ellipse,rgba(66,225,255,.36),rgba(22,67,180,.1) 48%,transparent 73%); }
-    .robot.focused .halo { background: radial-gradient(ellipse,rgba(63,202,255,.38),rgba(22,67,180,.1) 48%,transparent 73%); }
-    .robot.focused .brow-left { transform: translateY(-4px) rotate(-4deg); }
-    .robot.focused .brow-right { transform: translateY(-4px) rotate(4deg); }
-    .robot.surprised .eyeball { transform: scale(1.16); }
-    .robot.surprised .brow { stroke: #8dfff0; }
-    .robot.confused .brow-left { transform: translateY(-6px) rotate(-12deg); }
-    .robot.confused .brow-right { transform: translateY(3px) rotate(-7deg); }
-    .robot.confused .halo { background: radial-gradient(ellipse,rgba(184,143,255,.32),rgba(22,67,180,.1) 48%,transparent 73%); }
-    .robot.concerned .brow { stroke: #ff9a77; }
-    .robot.concerned .mouth-sad { stroke: #ffb08d; }
-    .robot.concerned .halo { background: radial-gradient(ellipse,rgba(255,131,105,.27),rgba(22,67,180,.1) 48%,transparent 73%); }
     .robot.thinking .halo { background: radial-gradient(ellipse,rgba(146,101,255,.42),rgba(22,67,180,.1) 48%,transparent 73%); }
     .robot.thinking .orbit { animation: spin 4s linear infinite; }
     .robot.listening .screen { filter: drop-shadow(0 0 11px #50eeff); }
@@ -324,6 +300,7 @@
       .hero-copy { top: 39%; left: 5%; width: 49%; }
       .hero-copy h1 { font-size: 16px; }
       .hero-copy p { font-size: 10px; }
+      .hero-tags { display: none; }
       .robot-hitbox { top: 4%; right: 0; width: 48%; height: 83%; }
       .speech { top: 4%; left: 4%; right: auto; max-width: 45%; font-size: 10px; }
       .hero-actions { bottom: 5%; left: 5%; max-width: 90%; gap: 5px; }
@@ -336,7 +313,6 @@
     @keyframes wave { from { transform: rotate(0deg); } to { transform: rotate(17deg); } }
     @keyframes listen-pulse { 0% { opacity: .8; scale: .8; } 100% { opacity: 0; scale: 1.45; } }
     @keyframes greeting-bounce { 40% { transform: translateY(-10px) scale(1.04); } 75% { transform: translateY(2px) scale(.99); } }
-    @keyframes excited-bounce { 35% { transform: translateY(-9px) rotate(3deg); } 70% { transform: translateY(1px) rotate(-2deg); } }
     @keyframes spin { to { transform: rotate(360deg); } }
     @keyframes talk { to { transform: scaleY(1.7); } }
     @keyframes star-drift { to { background-position: 290px 190px; } }
@@ -345,11 +321,12 @@
   </style>
 </head>
 <body>
-  <div class="hero" id="vision-hero" role="region" aria-labelledby="hero-title">
+  <div class="hero" id="vision-hero" aria-label="VisionAI Pro, trợ lý thị giác thông minh">
     <div class="space-grid" aria-hidden="true"></div>
     <div class="hero-copy">
-      <h1 id="hero-title">VisionAI Pro</h1>
-      <p>Tải ảnh hoặc chụp ảnh để Gemini mô tả, đọc chữ và trả lời câu hỏi.</p>
+      <h1>VisionAI Pro</h1>
+      <p>Trợ lý thị giác AI thân thiện, luôn sẵn sàng đồng hành cùng bạn.</p>
+      <div class="hero-tags"><span>Gemini AI</span><span>OCR tiếng Việt</span><span>Hỏi đáp ảnh</span></div>
     </div>
     <button class="robot-hitbox" id="robot-button" type="button" aria-label="Nhấn robot để trò chuyện với Vision">
       <div class="robot greeting" id="vision-robot">
@@ -461,7 +438,7 @@
         </svg>
       </div>
     </button>
-    <div class="speech" id="mini-speech" role="status" aria-live="polite"></div>
+    <div class="speech" id="mini-speech"></div>
   </div>
   <script>
     const hero = document.getElementById("vision-hero");
@@ -495,13 +472,6 @@
       }, duration);
     }
 
-    function animateRobots(className, duration) {
-      [robot, miniRobot].forEach((target) => target.classList.add(className));
-      setTimeout(() => {
-        [robot, miniRobot].forEach((target) => target.classList.remove(className));
-      }, duration);
-    }
-
     function render(args) {
       compact = Boolean(args.compact);
       document.body.classList.toggle("compact", compact);
@@ -513,23 +483,17 @@
       applyState(miniRobot, status);
       if (status !== lastStatus) {
         if (status === "greeting") {
-          animateRobots("wave-once", 2100);
+          robot.classList.add("wave-once");
+          setTimeout(() => robot.classList.remove("wave-once"), 2100);
         }
-        if (status === "happy" || status === "excited") {
-          animateRobots("celebrate-once", 2100);
-        }
-        if (status === "surprised") {
-          animateRobots("wave-once", 1100);
+        if (status === "happy") {
+          robot.classList.add("celebrate-once");
+          setTimeout(() => robot.classList.remove("celebrate-once"), 2100);
         }
         lastStatus = status;
       }
       clickCount = Number(args.click_count || 0);
       document.getElementById("robot-button").setAttribute(
-        "aria-label",
-        args.chat_open ? "Vision đang trò chuyện. Nhấn để mở lại phần hội thoại."
-          : "Nhấn robot để trò chuyện với Vision"
-      );
-      document.getElementById("mini-button").setAttribute(
         "aria-label",
         args.chat_open ? "Vision đang trò chuyện. Nhấn để mở lại phần hội thoại."
           : "Nhấn robot để trò chuyện với Vision"

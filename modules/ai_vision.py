@@ -10,20 +10,36 @@ from google.genai import types
 from modules.local_ocr import build_local_result
 
 # Danh sách model Gemini thử theo thứ tự; chỉnh trong .env, cách nhau bằng dấu phẩy.
-_DEFAULT_MODELS = "gemini-3.8-flash,gemini-3.6-flash,gemini-3.5-flash-lite"
+_DEFAULT_MODELS = "gemini-3.8-flash,gemini-3.6-flash,gemini-3.5-flash-lite,gemini-3.1-flash-lite"
 
-def _models():
+def get_gemini_models():
     configured = os.getenv("GEMINI_MODELS", "").strip()
-    if not configured:
-        configured = os.getenv("GEMINI_MODEL", "").strip()
-        configured = ",".join(x for x in (configured, _DEFAULT_MODELS) if x)
+    legacy = os.getenv("GEMINI_MODEL", "").strip()
+    preferred = configured.split(",") if configured else ([legacy] if legacy else [])
+    candidates = preferred + _DEFAULT_MODELS.split(",")
     seen, result = set(), []
-    for item in configured.split(","):
+    for item in candidates:
         model = item.strip()
-        if model and model not in seen:
+        if not model:
+            continue
+        if not model.startswith(("gemini-", "models/gemini-")):
+            raise ValueError("GEMINI_MODELS chỉ được chứa mã model Gemini.")
+        if model not in seen:
             seen.add(model)
             result.append(model)
-    return result or _DEFAULT_MODELS.split(",")
+    return result
+
+
+def _retry_after_seconds(exc):
+    headers = getattr(getattr(exc, "response", None), "headers", None)
+    if not headers:
+        return None
+    value = headers.get("Retry-After") or headers.get("retry-after")
+    try:
+        delay = float(value)
+    except (TypeError, ValueError):
+        return None
+    return delay if delay >= 0 else None
 
 SYSTEM_PROMPT = """
 Bạn là Trợ lý thị giác AI hỗ trợ người khiếm thị.
@@ -177,27 +193,45 @@ def _format_image_answer(answer):
     objects = data.get("objects")
     if isinstance(objects, list):
         object_lines = []
-        for item in objects:
+        for index, item in enumerate(objects, 1):
             if isinstance(item, str):
                 label = item.strip()
                 location = ""
                 description = ""
+                confidence = ""
             elif isinstance(item, dict):
                 label = str(item.get("name") or item.get("label") or item.get("item") or "Vật thể").strip()
                 location = str(item.get("location") or "").strip()
                 description = str(item.get("description") or item.get("visual_cue") or "").strip()
+                confidence_value = item.get("confidence") or item.get("certainty") or ""
+                if isinstance(confidence_value, (int, float)):
+                    confidence = (
+                        f"{confidence_value * 100:.0f}%"
+                        if 0 <= confidence_value <= 1
+                        else f"{confidence_value:.0f}%"
+                    )
+                else:
+                    confidence = str(confidence_value).strip()
             else:
                 continue
             if not label:
                 continue
-            line = f"• {label}"
+            details = []
             if location:
-                line += f" — {location}"
+                details.append(f"Vị trí tương đối: {location}")
             if description:
-                line += f". {description}"
+                details.append(f"Dấu hiệu nhận biết: {description}")
+            if confidence:
+                details.append(f"Độ tin cậy: {confidence}")
+            line = f"{index}. {label}"
+            if details:
+                line += "\n   " + "\n   ".join(details)
             object_lines.append(line)
         if object_lines:
-            sections.append("Các vật thể nhận diện:\n" + "\n".join(object_lines))
+            sections.append(
+                f"Các vật thể nhận diện ({len(object_lines)} mục):\n"
+                + "\n\n".join(object_lines)
+            )
 
     warning = str(data.get("warning") or "").strip()
     if warning:
@@ -227,19 +261,32 @@ def _call_with_fallback(make_request):
     """Thử từng model Gemini hữu hạn; dừng ngay khi key/quyền truy cập bị từ chối."""
     client = _client()
     errors = []
-    models = _models()
-    for index, model in enumerate(models):
-        try:
-            response = make_request(client, model)
-            return response, model
-        except Exception as exc:
-            status = _status_code(exc)
-            errors.append(f"{model}: HTTP {status or 'lỗi API/kết nối'}")
-            if status in (401, 403):
+    models = get_gemini_models()
+    stop = False
+    for model in models:
+        retried_server_error = False
+        while True:
+            try:
+                response = make_request(client, model)
+                return response, model
+            except Exception as exc:
+                status = _status_code(exc)
+                if status in (401, 403):
+                    errors.append(f"{model}: HTTP {status}")
+                    stop = True
+                    break
+                if status == 503 and not retried_server_error:
+                    delay = _retry_after_seconds(exc)
+                    if delay is None:
+                        delay = 1.0
+                    if delay <= 15:
+                        time.sleep(delay)
+                        retried_server_error = True
+                        continue
+                errors.append(f"{model}: HTTP {status or 'lỗi API/kết nối'}")
                 break
-            # Khi gặp giới hạn tốc độ, chờ ngắn trước khi thử model tiếp theo.
-            if status == 429 and index < len(models) - 1:
-                time.sleep(min(1.0, 0.25 * (index + 1)))
+        if stop:
+            break
     raise RuntimeError("Không model Gemini nào xử lý được yêu cầu. " + " | ".join(errors))
 
 def _decode_data_url(data_url):
@@ -319,13 +366,20 @@ def ask_about_image(data_url, question, conversation=None):
     prompt = f"""Bạn hỗ trợ người khiếm thị. Dựa chỉ trên hình ảnh, trả lời bằng tiếng Việt.
 Câu hỏi: {question}
 {context}
-Trả lời trực tiếp, dễ nghe, ưu tiên thông tin hữu ích và an toàn. Không bịa.
-Nếu câu hỏi yêu cầu tìm hoặc liệt kê nhiều vật thể, hãy ghi từng vật thể nhận diện được thành một mục riêng trong objects, kèm vị trí tương đối và dấu hiệu nhận biết; không gộp danh sách thành phần tóm tắt.
-Nếu không thể nhận diện đủ số lượng được yêu cầu, hãy liệt kê những vật thể thực sự nhìn thấy và nói rõ phần nào chưa chắc chắn.
-Nếu không xác định được từ ảnh, hãy nói rõ."""
+Hãy phân tích kỹ toàn bộ ảnh trong một lượt, rà lần lượt từ trên xuống dưới và từ trái sang phải.
+Nếu câu hỏi yêu cầu tìm hoặc liệt kê nhiều vật thể, đưa từng vật thể riêng vào objects; mỗi mục phải có name, location (vị trí tương đối kèm vùng ảnh), description (dấu hiệu nhìn thấy giúp nhận ra) và confidence nếu xác định được. Không gộp thành tóm tắt.
+Với tranh câu đố tìm đồ vật ẩn, tìm các vật nhỏ được giấu/ngụy trang; không tính nhân vật chính lặp lại hoặc chữ/logo giao diện là đáp án, trừ khi người dùng yêu cầu. Đếm mỗi vật một lần.
+Nếu ảnh chồng lấp hoặc không đủ rõ để nhận diện đủ số lượng, hãy liệt kê các vật thực sự nhận ra, nêu phần chưa chắc chắn và không bịa để đủ số lượng.
+Trả lời tiếng Việt chi tiết, dễ hiểu và không đưa ra thông tin không nhìn thấy được."""
     raw, mime = _decode_data_url(data_url)
+    assistant_instruction = """Bạn là trợ lý phân tích hình ảnh bằng tiếng Việt. Hãy xem xét toàn bộ ảnh cẩn thận.
+Chỉ trả về JSON hợp lệ với các khóa answer, summary, scene, objects, warning.
+objects phải là danh sách; mỗi phần tử gồm name, location, description và confidence nếu có thể xác định.
+Khi người dùng yêu cầu nhiều vật hoặc một số lượng cụ thể, hãy liệt kê riêng từng vật thể khác nhau, kèm vị trí cụ thể và dấu hiệu quan sát được. Không lặp vật để đạt số lượng và không đoán khi ảnh không đủ cơ sở.
+Không trả lời bằng một đoạn tóm tắt thay cho danh sách. Không thêm Markdown hay văn bản ngoài JSON."""
     response, _model = _call_with_fallback(lambda client, model: _generate(
-        client, model, prompt, raw=raw, mime_type=mime, json_mode=False))
+        client, model, prompt, raw=raw, mime_type=mime, json_mode=True,
+        system_instruction=assistant_instruction))
     return _format_image_answer(getattr(response, "text", ""))
 
 

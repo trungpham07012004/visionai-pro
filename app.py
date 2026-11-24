@@ -16,6 +16,7 @@ from modules.ai_vision import (
     analyze_local_ocr,
     ask_about_image,
     ask_vision_assistant,
+    get_gemini_models,
     is_api_ready,
     test_gemini_connection,
 )
@@ -336,7 +337,9 @@ def friendly_error_message(error):
     if "GEMINI_API_KEY" in detail or "Chưa có" in detail:
         return "Mình chưa thể kết nối Gemini. Hãy mở Cài đặt và kiểm tra file .env; không cần dán khóa vào trang."
     if "429" in detail or "quota" in detail.lower() or "resource_exhausted" in detail.lower():
-        return "Gemini đang bận hoặc đã hết hạn mức tạm thời. Chờ một chút rồi thử lại."
+        return "Gemini đang giới hạn lượt gọi. Ứng dụng đã thử các model Gemini dự phòng; hãy chờ hạn mức hồi phục hoặc kiểm tra quota trong Google AI Studio."
+    if "503" in detail or "unavailable" in detail.lower():
+        return "Gemini đang tạm thời quá tải. Ứng dụng đã thử lại và chuyển qua các model Gemini dự phòng; hãy thử lại sau."
     if "401" in detail or "403" in detail or "unauthorized" in detail.lower() or "permission" in detail.lower():
         return "Gemini chưa chấp nhận cấu hình hiện tại. Hãy kiểm tra API key và quyền truy cập model trong file .env."
     if "micro" in detail.lower() or "audio" in detail.lower() or "speech" in detail.lower():
@@ -1397,8 +1400,7 @@ elif page == "⚙️ Cài đặt":
     current_label = next((label for label, value in voice_options.items() if value == current_voice), next(iter(voice_options)))
     selected_voice = st.selectbox("Giọng đọc trợ lý Vision", list(voice_options.keys()), index=list(voice_options.keys()).index(current_label))
     st.session_state.tts_voice = voice_options[selected_voice]
-    model_list = os.getenv("GEMINI_MODELS", "gemini-3.8-flash,gemini-3.6-flash,gemini-3.5-flash-lite")
-    st.info("Model chính và dự phòng: " + " → ".join(x.strip() for x in model_list.split(",") if x.strip()))
+    st.info("Model Gemini thử theo thứ tự: " + " → ".join(get_gemini_models()))
     if st.session_state.gemini_connection_result:
         st.success(st.session_state.gemini_connection_result)
     if st.button(

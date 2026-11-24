@@ -63,7 +63,6 @@ def save_history(item):
             safe_item[field] = str(safe_item[field] or "")[:12000]
     history.insert(0, safe_item)
     _write_history(history[:100])
-    return safe_item["id"]
 
 
 def _write_history(history):

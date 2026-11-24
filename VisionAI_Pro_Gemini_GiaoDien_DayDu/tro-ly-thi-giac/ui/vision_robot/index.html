@@ -1,0 +1,585 @@
+<!doctype html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <style>
+    * { box-sizing: border-box; }
+    html, body { width: 100%; height: 100%; margin: 0; overflow: hidden; background: transparent; }
+    body { color: #eef7ff; font-family: Arial, sans-serif; }
+    .hero {
+      position: relative;
+      width: 100%;
+      min-height: 240px;
+      overflow: hidden;
+      border: 1px solid rgba(37,149,255,.62);
+      border-radius: 22px;
+      background:
+        radial-gradient(ellipse at 80% 47%, rgba(0,195,255,.28), transparent 27%),
+        radial-gradient(ellipse at 92% 18%, rgba(153,91,255,.19), transparent 30%),
+        radial-gradient(ellipse at 15% 11%, rgba(87,111,255,.19), transparent 36%),
+        linear-gradient(115deg, #071735, #091b3d 56%, #06122a);
+      box-shadow: inset 0 0 70px rgba(39,118,255,.1), 0 22px 60px rgba(0,0,0,.25);
+      isolation: isolate;
+    }
+    .hero::before, .hero::after {
+      position: absolute;
+      z-index: -1;
+      inset: 0;
+      pointer-events: none;
+      content: "";
+    }
+    .hero::before {
+      opacity: .48;
+      background-image:
+        radial-gradient(1px 1px at 14% 25%, #e6faff 98%, transparent),
+        radial-gradient(1px 1px at 36% 72%, #9aebff 98%, transparent),
+        radial-gradient(1px 1px at 49% 18%, #d2ccff 98%, transparent),
+        radial-gradient(1px 1px at 68% 82%, #fff 98%, transparent),
+        radial-gradient(2px 2px at 87% 29%, #8deaff 98%, transparent),
+        radial-gradient(1px 1px at 94% 69%, #fff 98%, transparent);
+      background-size: 290px 190px;
+      animation: star-drift 28s linear infinite;
+    }
+    .hero::after {
+      inset: auto 0 -45% 28%;
+      height: 85%;
+      border: 1px solid rgba(74,204,255,.17);
+      border-radius: 50%;
+      box-shadow: 0 0 35px rgba(34,150,255,.11), inset 0 0 35px rgba(115,89,255,.1);
+      transform: rotate(-9deg);
+      animation: orbit-breathe 7s ease-in-out infinite;
+    }
+    .hero-copy {
+      position: absolute;
+      z-index: 2;
+      top: 44%;
+      left: 5%;
+      width: min(48%, 610px);
+      transform: translateY(-50%);
+      pointer-events: none;
+    }
+    .hero-copy h1 {
+      margin: 0 0 8px;
+      color: #f3f8ff;
+      font: 800 clamp(18px, 3.2vw, 34px)/1.08 Arial,sans-serif;
+      letter-spacing: -.04em;
+    }
+    .hero-copy p {
+      margin: 0;
+      color: #c6d9f7;
+      font: 500 clamp(10px, 1.45vw, 15px)/1.5 Arial,sans-serif;
+    }
+    .hero-tags {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      margin-top: 12px;
+    }
+    .hero-tags span {
+      padding: 5px 7px;
+      border: 1px solid rgba(103,201,255,.28);
+      border-radius: 8px;
+      background: rgba(15,76,145,.26);
+      color: #9deaff;
+      font: 700 9px Arial,sans-serif;
+    }
+    .hero-actions {
+      position: absolute;
+      z-index: 5;
+      bottom: 8%;
+      left: 5%;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      max-width: 62%;
+    }
+    .hero-action {
+      min-height: 36px;
+      padding: 8px 12px;
+      border: 1px solid rgba(103,201,255,.32);
+      border-radius: 11px;
+      background: rgba(8,28,63,.78);
+      color: #e6f7ff;
+      font: 700 10px Arial,sans-serif;
+      cursor: pointer;
+      transition: transform .18s ease, border-color .18s ease, background .18s ease;
+    }
+    .hero-action:hover {
+      transform: translateY(-2px);
+      border-color: rgba(96,230,255,.8);
+      background: rgba(17,68,124,.84);
+    }
+    .hero-action:focus-visible { outline: 2px solid #78f3ff; outline-offset: 2px; }
+    .hero-action.primary {
+      border-color: rgba(82,222,255,.64);
+      background: linear-gradient(110deg,rgba(0,158,219,.54),rgba(99,80,219,.5));
+    }
+    .robot-hitbox {
+      position: absolute;
+      z-index: 3;
+      top: 1%;
+      right: 2%;
+      width: min(35%,320px);
+      height: 98%;
+      display: block;
+      padding: 0;
+      overflow: visible;
+      border: 0;
+      border-radius: 12px;
+      background: transparent;
+      cursor: pointer;
+    }
+    .robot-hitbox:focus-visible { outline: 2px solid #78f3ff; outline-offset: -2px; }
+    .robot {
+      position: relative;
+      width: 100%;
+      height: 100%;
+      overflow: visible;
+      transform: translate(var(--shift-x,0),var(--shift-y,0)) rotate(var(--tilt,0));
+      transform-origin: 50% 64%;
+      transition: transform .32s cubic-bezier(.2,.8,.2,1);
+      filter: drop-shadow(0 13px 22px rgba(0,142,255,.34));
+      animation: float 4.2s ease-in-out infinite;
+    }
+    .halo {
+      position: absolute;
+      inset: 8% 2% 2%;
+      border-radius: 50%;
+      background: radial-gradient(ellipse,rgba(0,199,255,.28),rgba(22,67,180,.1) 48%,transparent 73%);
+      filter: blur(8px);
+      animation: breathe 3.8s ease-in-out infinite;
+    }
+    .orbit {
+      position: absolute;
+      top: 13%;
+      left: 13%;
+      width: 73%;
+      height: 68%;
+      border: 1px solid rgba(49,214,255,.36);
+      border-radius: 50%;
+      transform: rotate(-18deg);
+      box-shadow: 0 0 17px rgba(17,183,255,.13);
+    }
+    .orbit::after {
+      position: absolute;
+      inset: 9%;
+      border: 1px dashed rgba(129,153,255,.42);
+      border-radius: 50%;
+      content: "";
+      transform: rotate(28deg);
+    }
+    .robot svg { position: relative; width: 100%; height: 100%; overflow: visible; }
+    .eye-pupil {
+      transform-box: fill-box;
+      transform-origin: center;
+      transition: transform .32s cubic-bezier(.2,.8,.2,1);
+    }
+    .eye-open, .eye-smile, .eye-sad, .eye-half, .eye-ring, .brow, .mouth-smile,
+    .mouth-open, .mouth-flat, .mouth-sad, .mouth-curious, .cheek {
+      opacity: 0;
+      transform-box: fill-box;
+      transform-origin: center;
+    }
+    .eye-open, .eye-smile, .eye-sad, .eye-half, .eye-ring, .brow, .mouth-smile,
+    .mouth-open, .mouth-flat, .mouth-sad, .mouth-curious, .cheek {
+      transition: opacity .32s ease, transform .32s cubic-bezier(.2,.8,.2,1), filter .32s ease;
+    }
+    .brow { fill: none; stroke: #68eaff; stroke-width: 7; stroke-linecap: round; }
+    .speech {
+      position: absolute;
+      z-index: 4;
+      top: 4%;
+      left: 5%;
+      right: auto;
+      max-width: min(270px, 43%);
+      max-height: 60px;
+      padding: 10px 12px;
+      border: 1px solid rgba(88,192,255,.55);
+      border-radius: 12px;
+      background: rgba(4,17,45,.95);
+      color: #eaf7ff;
+      font: 600 12px/1.45 Arial,sans-serif;
+      box-shadow: 0 6px 20px rgba(0,0,0,.24);
+      overflow: auto;
+      pointer-events: none;
+    }
+    .robot.wave-once #arm-wave, .robot.celebrate-once #arm-wave { animation: wave .48s ease-in-out 4 alternate; }
+    .robot.idle .eye-open, .robot.helping .eye-open, .robot.curious .eye-open,
+    .robot.listening .eye-open, .robot.speaking .eye-open { opacity: 1; }
+    .robot.greeting .eye-smile, .robot.happy .eye-smile { opacity: 1; }
+    .robot.thinking .eye-half { opacity: 1; }
+    .robot.error .eye-sad { opacity: 1; }
+    .robot.idle .mouth-smile, .robot.greeting .mouth-smile, .robot.happy .mouth-smile {
+      opacity: 1;
+    }
+    .robot.curious .mouth-curious, .robot.helping .mouth-curious,
+    .robot.listening .mouth-curious { opacity: 1; }
+    .robot.thinking .mouth-flat { opacity: 1; }
+    .robot.speaking .mouth-open { opacity: 1; }
+    .robot.error .mouth-sad { opacity: 1; }
+    .robot.curious .eye-ring, .robot.helping .eye-ring, .robot.listening .eye-ring {
+      opacity: 1;
+    }
+    .robot.curious .brow, .robot.helping .brow, .robot.thinking .brow,
+    .robot.error .brow { opacity: 1; }
+    .robot.happy .cheek, .robot.greeting .cheek { opacity: 1; }
+    .robot .eyeball { animation: blink 5.2s ease-in-out infinite; }
+    .robot.idle .eye-pupil {
+      animation: idle-glance 13s ease-in-out infinite;
+    }
+    .robot.greeting .mouth-smile, .robot.happy .mouth-smile { stroke: #70ffe2; stroke-width: 10; }
+    .robot.happy .halo { background: radial-gradient(ellipse,rgba(84,255,214,.34),rgba(22,67,180,.1) 48%,transparent 73%); }
+    .robot.curious .eyeball { transform: scale(1.08); }
+    .robot.curious .eye-ring, .robot.helping .eye-ring { stroke: #a6faff; }
+    .robot.curious .brow-left, .robot.helping .brow-left { transform: translateY(-4px) rotate(-8deg); }
+    .robot.curious .brow-right, .robot.helping .brow-right { transform: translateY(-5px) rotate(8deg); }
+    .robot.curious .halo { background: radial-gradient(ellipse,rgba(66,225,255,.36),rgba(22,67,180,.1) 48%,transparent 73%); }
+    .robot.thinking .halo { background: radial-gradient(ellipse,rgba(146,101,255,.42),rgba(22,67,180,.1) 48%,transparent 73%); }
+    .robot.thinking .orbit { animation: spin 4s linear infinite; }
+    .robot.listening .screen { filter: drop-shadow(0 0 11px #50eeff); }
+    .robot.listening .eyeball { filter: drop-shadow(0 0 8px #50eeff); transform: scaleY(1.12); }
+    .robot.listening .eye-ring { animation: listen-pulse 1.4s ease-out infinite; transform-box: fill-box; transform-origin: center; }
+    .robot.thinking .brow-left { transform: translateY(-2px) rotate(-10deg); }
+    .robot.thinking .brow-right { transform: translateY(-4px) rotate(10deg); }
+    .robot.speaking .mouth-open { animation: talk .22s ease-in-out infinite alternate; transform-origin: 170px 181px; }
+    .robot.error .brow { stroke: #ff8297; }
+    .robot.error .brow-left { transform: rotate(12deg); }
+    .robot.error .brow-right { transform: rotate(-12deg); }
+    .robot.error .mouth-sad { stroke: #ff9aab; }
+    .robot.idle.hovered .eyeball { animation: none; transform: scale(1.12); }
+    .robot.idle.hovered .brow { opacity: 1; }
+    .robot.idle.hovered .brow-left { transform: translateY(-4px) rotate(-8deg); }
+    .robot.idle.hovered .brow-right { transform: translateY(-5px) rotate(8deg); }
+    .robot.pressed { animation: greeting-bounce .42s ease-out 1; }
+    .mini {
+      display: none;
+      height: 112px;
+      align-items: center;
+      gap: 12px;
+      padding: 8px 12px;
+      border: 1px solid rgba(57,139,255,.4);
+      border-radius: 14px;
+      background: linear-gradient(120deg,#051c42,#04112d);
+    }
+    .mini .robot-hitbox {
+      position: relative;
+      top: auto;
+      right: auto;
+      width: 82px;
+      height: 92px;
+      flex: 0 0 82px;
+    }
+    .mini .robot svg { width: 82px; height: 92px; }
+    .mini .halo { inset: 10px; }
+    .mini .orbit { top: 12px; left: 12px; width: 58px; height: 62px; }
+    .mini .speech {
+      position: relative;
+      inset: auto;
+      max-width: none;
+      max-height: 94px;
+      flex: 1;
+      overflow: auto;
+      padding: 0;
+      border: 0;
+      background: transparent;
+      box-shadow: none;
+      font: 12px/1.45 Arial,sans-serif;
+    }
+    .mini .speech::before {
+      display: block;
+      margin-bottom: 4px;
+      color: #75eaff;
+      content: "Vision · trạng thái";
+      font-weight: 700;
+    }
+    .compact .hero { display: none; }
+    .compact .mini { display: flex; }
+    @media (max-width: 540px) {
+      .hero { min-height: 235px; border-radius: 17px; }
+      .hero-copy { top: 39%; left: 5%; width: 49%; }
+      .hero-copy h1 { font-size: 16px; }
+      .hero-copy p { font-size: 10px; }
+      .hero-tags { display: none; }
+      .robot-hitbox { top: 4%; right: 0; width: 48%; height: 83%; }
+      .speech { top: 4%; left: 4%; right: auto; max-width: 45%; font-size: 10px; }
+      .hero-actions { bottom: 5%; left: 5%; max-width: 90%; gap: 5px; }
+      .hero-action { min-height: 32px; padding: 7px 8px; font-size: 10px; }
+    }
+    @keyframes float { 0%,100% { translate: 0 0; } 50% { translate: 0 -6px; } }
+    @keyframes breathe { 0%,100% { opacity: .55; scale: .92; } 50% { opacity: 1; scale: 1.04; } }
+    @keyframes blink { 0%,44%,48%,100% { scale: 1 1; } 46% { scale: 1 .08; } }
+    @keyframes idle-glance { 0%,17%,100% { translate: 0 0; } 20%,29% { translate: 3px -1px; } 32%,42% { translate: -3px 1px; } 45%,70% { translate: 0 0; } }
+    @keyframes wave { from { transform: rotate(0deg); } to { transform: rotate(17deg); } }
+    @keyframes listen-pulse { 0% { opacity: .8; scale: .8; } 100% { opacity: 0; scale: 1.45; } }
+    @keyframes greeting-bounce { 40% { transform: translateY(-10px) scale(1.04); } 75% { transform: translateY(2px) scale(.99); } }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    @keyframes talk { to { transform: scaleY(1.7); } }
+    @keyframes star-drift { to { background-position: 290px 190px; } }
+    @keyframes orbit-breathe { 50% { opacity: .45; transform: rotate(-4deg) scale(1.04); } }
+    @media (prefers-reduced-motion: reduce) { *,*::before,*::after { animation: none !important; transition: none !important; } }
+  </style>
+</head>
+<body>
+  <div class="hero" id="vision-hero" aria-label="VisionAI Pro, trợ lý thị giác thông minh">
+    <div class="space-grid" aria-hidden="true"></div>
+    <div class="hero-copy">
+      <h1>VisionAI Pro</h1>
+      <p>Trợ lý thị giác AI thân thiện, luôn sẵn sàng đồng hành cùng bạn.</p>
+      <div class="hero-tags"><span>Gemini AI</span><span>OCR tiếng Việt</span><span>Hỏi đáp ảnh</span></div>
+    </div>
+    <button class="robot-hitbox" id="robot-button" type="button" aria-label="Nhấn robot để trò chuyện với Vision">
+      <div class="robot greeting" id="vision-robot">
+        <div class="halo"></div><div class="orbit"></div>
+        <svg viewBox="0 0 340 350" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+          <defs>
+            <linearGradient id="shell" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#fff"/><stop offset=".23" stop-color="#a8d7ff"/><stop offset=".48" stop-color="#f8fdff"/><stop offset=".72" stop-color="#7295da"/><stop offset="1" stop-color="#d7f4ff"/></linearGradient>
+            <linearGradient id="shellSide" x1="0" y1="0" x2="1" y2="0"><stop stop-color="#57dfff"/><stop offset=".45" stop-color="#3862c0"/><stop offset="1" stop-color="#e9fbff"/></linearGradient>
+            <linearGradient id="screen" x1="0" y1="0" x2=".8" y2="1"><stop stop-color="#07142e"/><stop offset=".55" stop-color="#020817"/><stop offset="1" stop-color="#0b2450"/></linearGradient>
+            <linearGradient id="body" x1="0" y1="0" x2=".9" y2="1"><stop stop-color="#a7eaff"/><stop offset=".38" stop-color="#f6fdff"/><stop offset=".7" stop-color="#6e91d4"/><stop offset="1" stop-color="#d7f7ff"/></linearGradient>
+            <linearGradient id="eyeGlow"><stop stop-color="#fff"/><stop offset=".35" stop-color="#52f5ff"/><stop offset="1" stop-color="#08aaff"/></linearGradient>
+            <filter id="glow"><feGaussianBlur stdDeviation="4" result="blur"/><feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+          </defs>
+          <path d="M170 8v29" stroke="#6deaff" stroke-width="5" stroke-linecap="round"/>
+          <circle cx="170" cy="24" r="15" fill="#061a42" stroke="#8df6ff" stroke-width="4" filter="url(#glow)"/>
+          <circle cx="170" cy="24" r="7" fill="#49dfff"/>
+          <path d="M170 37 170 57" stroke="#6ceaff" stroke-width="4"/>
+          <path d="M77 98 48 93v75l31-5M263 98l29-5v75l-31-5" fill="url(#shellSide)" stroke="#82eaff" stroke-width="4"/>
+          <rect x="61" y="61" width="218" height="174" rx="72" fill="url(#shell)" stroke="#bbf5ff" stroke-width="5"/>
+          <path d="M85 88q8-24 34-28h95q29 4 41 29" fill="none" stroke="#fff" stroke-opacity=".82" stroke-width="7" stroke-linecap="round"/>
+          <rect class="screen" x="78" y="84" width="184" height="132" rx="52" fill="url(#screen)" stroke="#071a3f" stroke-width="5"/>
+          <path d="M91 96q51-25 107-17" fill="none" stroke="#fff" stroke-opacity=".22" stroke-width="5" stroke-linecap="round"/>
+          <g filter="url(#glow)">
+            <circle class="eye-ring" cx="125" cy="145" r="24" fill="none" stroke="#69f0ff" stroke-width="2"/>
+            <circle class="eye-ring" cx="215" cy="145" r="24" fill="none" stroke="#69f0ff" stroke-width="2"/>
+            <g class="eye-pupil" id="eye-left">
+              <ellipse class="eye-open eyeball" cx="125" cy="145" rx="10" ry="16" fill="url(#eyeGlow)"/>
+              <circle class="eye-open eye-glint" cx="121" cy="139" r="3" fill="#fff" opacity=".9"/>
+              <path class="eye-smile" d="M108 151q17-26 34 0" fill="none" stroke="url(#eyeGlow)" stroke-width="12" stroke-linecap="round"/>
+              <path class="eye-sad" d="M108 139q17 25 34 0" fill="none" stroke="#ff9aab" stroke-width="11" stroke-linecap="round"/>
+              <path class="eye-half" d="M108 147q17-13 34 0" fill="none" stroke="#70dfff" stroke-width="12" stroke-linecap="round"/>
+            </g>
+            <g class="eye-pupil" id="eye-right">
+              <ellipse class="eye-open eyeball" cx="215" cy="145" rx="10" ry="16" fill="url(#eyeGlow)"/>
+              <circle class="eye-open eye-glint" cx="211" cy="139" r="3" fill="#fff" opacity=".9"/>
+              <path class="eye-smile" d="M198 151q17-26 34 0" fill="none" stroke="url(#eyeGlow)" stroke-width="12" stroke-linecap="round"/>
+              <path class="eye-sad" d="M198 139q17 25 34 0" fill="none" stroke="#ff9aab" stroke-width="11" stroke-linecap="round"/>
+              <path class="eye-half" d="M198 147q17-13 34 0" fill="none" stroke="#70dfff" stroke-width="12" stroke-linecap="round"/>
+            </g>
+            <path class="brow brow-left" d="M106 119q15-9 31-2"/>
+            <path class="brow brow-right" d="M199 117q15-7 31 2"/>
+            <g id="mouth">
+              <path class="mouth-smile" id="mouth-smile" d="M148 173q22 24 44 0" fill="none" stroke="#46eaff" stroke-width="8" stroke-linecap="round"/>
+              <ellipse class="mouth-open" cx="170" cy="181" rx="11" ry="7" fill="#48dcff" stroke="#baf8ff" stroke-width="3"/>
+              <path class="mouth-flat" d="M157 181h26" fill="none" stroke="#74eaff" stroke-width="7" stroke-linecap="round"/>
+              <path class="mouth-sad" d="M148 187q22-24 44 0" fill="none" stroke="#ff9aab" stroke-width="8" stroke-linecap="round"/>
+              <path class="mouth-curious" d="M164 184q7-8 14 0" fill="none" stroke="#76eaff" stroke-width="7" stroke-linecap="round"/>
+            </g>
+            <circle class="cheek" cx="103" cy="179" r="7" fill="#ff83c8"/>
+            <circle class="cheek" cx="237" cy="179" r="7" fill="#ff83c8"/>
+          </g>
+          <circle cx="72" cy="147" r="19" fill="#183c78" stroke="#75f2ff" stroke-width="4"/>
+          <circle cx="268" cy="147" r="19" fill="#183c78" stroke="#75f2ff" stroke-width="4"/>
+          <path d="M147 235v19h46v-19" fill="url(#shellSide)" stroke="#bcefff" stroke-width="3"/>
+          <path d="M91 260q9-22 39-22h77q31 0 43 23l24 61H66z" fill="url(#body)" stroke="#9ceaff" stroke-width="4"/>
+          <path d="M116 251q53 25 108 0" fill="none" stroke="#fff" stroke-opacity=".75" stroke-width="5"/>
+          <circle cx="170" cy="284" r="30" fill="#102453" stroke="#55deff" stroke-width="5" filter="url(#glow)"/>
+          <path d="M149 284q21-21 42 0-21 21-42 0zm12 0a9 9 0 1 0 18 0 9 9 0 1 0-18 0" fill="none" stroke="#8ff8ff" stroke-width="4"/>
+          <path d="M84 267 56 283M256 267l24-27" stroke="#a9edff" stroke-width="18" stroke-linecap="round"/>
+          <g id="arm-wave" style="transform-box:fill-box;transform-origin:12% 100%"><path d="M280 242q-6-15 3-25l11 12 4-23q2-9 9-5l2 20 9-13q6-7 10 0l-7 18 8-7q8-5 9 2l-13 22q-9 14-27 9z" fill="url(#shell)" stroke="#77eaff" stroke-width="4" stroke-linejoin="round"/></g>
+          <path d="M65 314h210" stroke="#5fe4ff" stroke-width="3" stroke-linecap="round" opacity=".8"/>
+        </svg>
+      </div>
+    </button>
+    <div class="speech" id="speech" role="status" aria-live="polite">Xin chào! Mình là Vision, trợ lý thị giác của bạn.</div>
+    <div class="hero-actions" aria-label="Lối tắt VisionAI">
+      <button class="hero-action primary" type="button" data-action="analyze">📷 Phân tích hình ảnh</button>
+      <button class="hero-action" type="button" data-action="ocr">🔤 Đọc văn bản</button>
+      <button class="hero-action" type="button" data-action="image_chat">💬 Hỏi đáp theo ảnh</button>
+    </div>
+  </div>
+  <div class="mini compact" id="mini">
+    <button class="robot-hitbox" id="mini-button" type="button" aria-label="Nhấn robot để trò chuyện với Vision">
+      <div class="robot greeting" id="mini-robot">
+        <div class="halo"></div><div class="orbit"></div>
+        <svg viewBox="0 0 340 350" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+          <rect x="61" y="61" width="218" height="174" rx="72" fill="url(#shell)" stroke="#bbf5ff" stroke-width="5"/>
+          <rect class="screen" x="78" y="84" width="184" height="132" rx="52" fill="url(#screen)" stroke="#071a3f" stroke-width="5"/>
+          <circle class="eye-ring" cx="125" cy="145" r="24" fill="none" stroke="#69f0ff" stroke-width="2"/>
+          <circle class="eye-ring" cx="215" cy="145" r="24" fill="none" stroke="#69f0ff" stroke-width="2"/>
+          <g class="eye-pupil">
+            <ellipse class="eye-open eyeball" cx="125" cy="145" rx="10" ry="16" fill="#52f5ff"/>
+            <circle class="eye-open eye-glint" cx="121" cy="139" r="3" fill="#fff"/>
+            <path class="eye-smile" d="M108 151q17-26 34 0" fill="none" stroke="#52f5ff" stroke-width="12" stroke-linecap="round"/>
+            <path class="eye-sad" d="M108 139q17 25 34 0" fill="none" stroke="#ff9aab" stroke-width="11" stroke-linecap="round"/>
+            <path class="eye-half" d="M108 147q17-13 34 0" fill="none" stroke="#70dfff" stroke-width="12" stroke-linecap="round"/>
+          </g>
+          <g class="eye-pupil">
+            <ellipse class="eye-open eyeball" cx="215" cy="145" rx="10" ry="16" fill="#52f5ff"/>
+            <circle class="eye-open eye-glint" cx="211" cy="139" r="3" fill="#fff"/>
+            <path class="eye-smile" d="M198 151q17-26 34 0" fill="none" stroke="#52f5ff" stroke-width="12" stroke-linecap="round"/>
+            <path class="eye-sad" d="M198 139q17 25 34 0" fill="none" stroke="#ff9aab" stroke-width="11" stroke-linecap="round"/>
+            <path class="eye-half" d="M198 147q17-13 34 0" fill="none" stroke="#70dfff" stroke-width="12" stroke-linecap="round"/>
+          </g>
+          <path class="brow brow-left" d="M106 119q15-9 31-2"/>
+          <path class="brow brow-right" d="M199 117q15-7 31 2"/>
+          <circle class="cheek" cx="103" cy="179" r="7" fill="#ff83c8"/>
+          <circle class="cheek" cx="237" cy="179" r="7" fill="#ff83c8"/>
+          <g id="mini-mouth">
+            <path class="mouth-smile" d="M148 173q22 24 44 0" fill="none" stroke="#46eaff" stroke-width="8" stroke-linecap="round"/>
+            <ellipse class="mouth-open" cx="170" cy="181" rx="11" ry="7" fill="#48dcff" stroke="#baf8ff" stroke-width="3"/>
+            <path class="mouth-flat" d="M157 181h26" fill="none" stroke="#74eaff" stroke-width="7" stroke-linecap="round"/>
+            <path class="mouth-sad" d="M148 187q22-24 44 0" fill="none" stroke="#ff9aab" stroke-width="8" stroke-linecap="round"/>
+            <path class="mouth-curious" d="M164 184q7-8 14 0" fill="none" stroke="#76eaff" stroke-width="7" stroke-linecap="round"/>
+          </g>
+          <path d="M91 260q9-22 39-22h77q31 0 43 23l24 61H66z" fill="url(#body)" stroke="#9ceaff" stroke-width="4"/>
+          <path d="M84 267 56 283M256 267l24-27" stroke="#a9edff" stroke-width="18" stroke-linecap="round"/>
+          <g id="mini-arm"><path d="M280 242q-6-15 3-25l11 12 4-23q2-9 9-5l2 20 9-13q6-7 10 0l-7 18 8-7q8-5 9 2l-13 22q-9 14-27 9z" fill="url(#shell)" stroke="#77eaff" stroke-width="4" stroke-linejoin="round"/></g>
+        </svg>
+      </div>
+    </button>
+    <div class="speech" id="mini-speech"></div>
+  </div>
+  <script>
+    const hero = document.getElementById("vision-hero");
+    const robot = document.getElementById("vision-robot");
+    const leftEye = document.getElementById("eye-left");
+    const rightEye = document.getElementById("eye-right");
+    const button = document.getElementById("robot-button");
+    const miniRobot = document.getElementById("mini-robot");
+    let clickCount = 0;
+    let compact = false;
+    let lastHeight = 0;
+    let lastStatus = "";
+    let currentMessage = "";
+    let speechTimer;
+
+    function send(type, payload) {
+      window.parent.postMessage({isStreamlitMessage: true, type, ...payload}, "*");
+    }
+
+    function applyState(target, status) {
+      target.className = `robot ${status}`;
+    }
+
+    function showReaction(text, duration = 1800) {
+      clearTimeout(speechTimer);
+      document.getElementById("speech").textContent = text;
+      document.getElementById("mini-speech").textContent = text;
+      speechTimer = setTimeout(() => {
+        document.getElementById("speech").textContent = currentMessage;
+        document.getElementById("mini-speech").textContent = currentMessage;
+      }, duration);
+    }
+
+    function render(args) {
+      compact = Boolean(args.compact);
+      document.body.classList.toggle("compact", compact);
+      currentMessage = args.message || "";
+      document.getElementById("speech").textContent = currentMessage;
+      document.getElementById("mini-speech").textContent = currentMessage;
+      const status = args.status || "idle";
+      applyState(robot, status);
+      applyState(miniRobot, status);
+      if (status !== lastStatus) {
+        if (status === "greeting") {
+          robot.classList.add("wave-once");
+          setTimeout(() => robot.classList.remove("wave-once"), 2100);
+        }
+        if (status === "happy") {
+          robot.classList.add("celebrate-once");
+          setTimeout(() => robot.classList.remove("celebrate-once"), 2100);
+        }
+        lastStatus = status;
+      }
+      clickCount = Number(args.click_count || 0);
+      document.getElementById("robot-button").setAttribute(
+        "aria-label",
+        args.chat_open ? "Vision đang trò chuyện. Nhấn để mở lại phần hội thoại."
+          : "Nhấn robot để trò chuyện với Vision"
+      );
+      resizeHero();
+    }
+
+    function resizeHero() {
+      const height = compact
+        ? 120
+        : Math.min(330, Math.max(240, Math.round(hero.clientWidth * .42)));
+      hero.style.height = `${height}px`;
+      if (height !== lastHeight) {
+        lastHeight = height;
+        send("streamlit:setFrameHeight", {height: height + 4});
+      }
+    }
+
+    function follow(event) {
+      if (compact) return;
+      const bounds = hero.getBoundingClientRect();
+      const x = (event.clientX - bounds.left) / bounds.width - .5;
+      const y = (event.clientY - bounds.top) / bounds.height - .5;
+      robot.style.setProperty("--shift-x", `${(x * 12).toFixed(1)}px`);
+      robot.style.setProperty("--shift-y", `${(y * 8).toFixed(1)}px`);
+      robot.style.setProperty("--tilt", `${(x * 5).toFixed(1)}deg`);
+      const eyeX = (x * 4).toFixed(1);
+      const eyeY = (y * 3).toFixed(1);
+      leftEye.setAttribute("transform", `translate(${eyeX} ${eyeY})`);
+      rightEye.setAttribute("transform", `translate(${eyeX} ${eyeY})`);
+    }
+
+    function resetFollow() {
+      robot.style.setProperty("--shift-x", "0px");
+      robot.style.setProperty("--shift-y", "0px");
+      robot.style.setProperty("--tilt", "0deg");
+      leftEye.setAttribute("transform", "translate(0 0)");
+      rightEye.setAttribute("transform", "translate(0 0)");
+    }
+
+    function dispatchAction(action, event) {
+      event.preventDefault();
+      robot.classList.add("pressed");
+      setTimeout(() => robot.classList.remove("pressed"), 450);
+      const reactions = {
+        chat: "Mình đây! Bạn muốn hỏi điều gì nhỉ?",
+        analyze: "Mình tò mò về bức ảnh bạn sắp gửi rồi!",
+        ocr: "Mình sẽ tập trung đọc chữ thật rõ cho bạn.",
+        image_chat: "Chọn một ảnh rồi hỏi mình bất cứ điều gì nhé."
+      };
+      showReaction(reactions[action] || currentMessage, 2200);
+      send("streamlit:setComponentValue", {
+        value: {action, nonce: ++clickCount}
+      });
+    }
+
+    hero.addEventListener("pointermove", follow);
+    hero.addEventListener("pointerleave", resetFollow);
+    new ResizeObserver(resizeHero).observe(document.body);
+    button.addEventListener("pointerenter", () => {
+      robot.classList.add("hovered");
+      showReaction("Mình đang nhìn theo bạn nè!", 1500);
+    });
+    button.addEventListener("pointerleave", () => robot.classList.remove("hovered"));
+    button.addEventListener("focus", () => robot.classList.add("hovered"));
+    button.addEventListener("blur", () => robot.classList.remove("hovered"));
+    button.addEventListener("click", (event) => dispatchAction("chat", event));
+    document.getElementById("mini-button").addEventListener(
+      "click", (event) => dispatchAction("chat", event)
+    );
+    document.getElementById("mini-button").addEventListener("pointerenter", () => {
+      miniRobot.classList.add("hovered");
+      showReaction("Mình đang ở đây nếu bạn cần nhé.", 1500);
+    });
+    document.getElementById("mini-button").addEventListener(
+      "pointerleave", () => miniRobot.classList.remove("hovered")
+    );
+    document.querySelectorAll(".hero-action").forEach((actionButton) => {
+      actionButton.addEventListener("click", (event) =>
+        dispatchAction(actionButton.dataset.action, event)
+      );
+    });
+    window.addEventListener("message", (event) => {
+      if (event.data && event.data.type === "streamlit:render") render(event.data.args || {});
+    });
+    send("streamlit:componentReady", {apiVersion: 1});
+  </script>
+</body>
+</html>

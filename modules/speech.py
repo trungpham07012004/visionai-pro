@@ -14,16 +14,16 @@ EDGE_PITCH = os.getenv("EDGE_TTS_PITCH", "+0Hz")
 STT_LANGUAGE = os.getenv("STT_LANGUAGE", "vi-VN")
 
 
-async def _edge_save(text, path, voice):
+async def _edge_save(text, path):
     import edge_tts
-    communicate = edge_tts.Communicate(text=text[:5000], voice=voice, rate=EDGE_RATE, pitch=EDGE_PITCH)
+    communicate = edge_tts.Communicate(text=text[:5000], voice=EDGE_VOICE, rate=EDGE_RATE, pitch=EDGE_PITCH)
     await communicate.save(path)
 
 
-def _edge_tts(text, voice):
+def _edge_tts(text):
     path = tempfile.NamedTemporaryFile(delete=False, suffix=".mp3").name
     try:
-        asyncio.run(_edge_save(text, path, voice))
+        asyncio.run(_edge_save(text, path))
         return path
     except Exception:
         try:
@@ -64,17 +64,23 @@ def text_to_speech(text, voice=None):
     text = (text or "").strip()
     if not text:
         return None
-    selected_voice = voice or EDGE_VOICE
+    global EDGE_VOICE
+    old_voice = EDGE_VOICE
+    if voice:
+        EDGE_VOICE = voice
     try:
-        return _edge_tts(text, selected_voice)
-    except Exception as edge_error:
         try:
-            return _windows_tts(text, preferred_voice=selected_voice)
-        except Exception as local_error:
-            raise RuntimeError(
-                "Không tạo được giọng nói miễn phí. "
-                f"Edge TTS: {edge_error}; Windows TTS: {local_error}"
-            ) from local_error
+            return _edge_tts(text)
+        except Exception as edge_error:
+            try:
+                return _windows_tts(text, preferred_voice=voice or old_voice)
+            except Exception as local_error:
+                raise RuntimeError(
+                    "Không tạo được giọng nói miễn phí. "
+                    f"Edge TTS: {edge_error}; Windows TTS: {local_error}"
+                )
+    finally:
+        EDGE_VOICE = old_voice
 
 
 def transcribe_audio(audio_file):
@@ -104,7 +110,7 @@ def transcribe_audio(audio_file):
             audio = recognizer.record(source)
 
         try:
-             return recognizer.recognize_google(audio, language=STT_LANGUAGE).strip()
+            return recognizer.recognize_google(audio, language=STT_LANGUAGE).strip()
         except sr.UnknownValueError:
             return ""
         except sr.RequestError as exc:

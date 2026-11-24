@@ -1,159 +1,69 @@
-<div align="center">
+# VisionAI Pro — Trợ lý thị giác AI (Gemini)
 
-<img src="assets/visionai_hero_banner.png" alt="VisionAI Pro — Trợ lý thị giác AI" width="100%">
+Ứng dụng Streamlit dùng Google Gemini để mô tả ảnh và hỏi đáp; OCR tiếng Việt chạy bằng Tesseract. Có đọc kết quả thành tiếng, tìm vật trong ảnh, lệnh thoại, lịch sử và báo cáo.
 
-# VisionAI Pro
+## Robot Vision
 
-### Trợ lý thị giác AI hỗ trợ tiếp cận thông tin hình ảnh
+Robot Vision có thể mở chat và biểu lộ vui, hào hứng, đồng cảm, trấn an, tập trung hoặc lo lắng theo kết quả. Chế độ trợ năng (chữ, nút lớn và viền focus rõ) bật sẵn; có thể tắt ở thanh bên. Sau phân tích, nút **Nghe toàn bộ kết quả** đọc cảnh báo trước, rồi đến phần mô tả. Phân tích ảnh và hỏi đáp vẫn dùng Gemini.
 
-Ứng dụng web dùng **Google Gemini** để mô tả và trả lời câu hỏi về ảnh, kết hợp **Tesseract OCR** để đọc văn bản cục bộ. Giao diện Streamlit có hỗ trợ giọng nói, lịch sử phân tích và các tùy chọn trợ năng.
-
-<p>
-  <img src="https://img.shields.io/badge/Python-3.11%20%7C%203.12-3776AB?logo=python&logoColor=white" alt="Python 3.11 và 3.12">
-  <img src="https://img.shields.io/badge/UI-Streamlit-FF4B4B?logo=streamlit&logoColor=white" alt="Streamlit">
-  <img src="https://img.shields.io/badge/Vision-Google%20Gemini-4285F4?logo=googlegemini&logoColor=white" alt="Google Gemini">
-  <img src="https://img.shields.io/badge/OCR-Tesseract-2F6F9F" alt="Tesseract OCR">
-</p>
-
-**[Mã nguồn](https://github.com/trungpham07012004/visionai-pro)** · **[Báo cáo đồ án](Báo-cáo-latex/do-an.tex)**
-
-</div>
-
----
-
-## Giới thiệu
-
-VisionAI Pro là đồ án xây dựng trợ lý thị giác bằng tiếng Việt. Người dùng có thể tải ảnh để nhận mô tả, hỏi về nội dung ảnh hoặc đọc chữ bằng OCR. Kết quả có thể được đọc thành tiếng và lưu trong lịch sử trên máy.
-
-## Minh họa
-
-<div align="center">
-  <img src="assets/demo-mo-ta-toan-canh.png" alt="VisionAI mô tả toàn cảnh ảnh" width="32%">
-  <img src="assets/demo-ho-tro-khiem-thi.png" alt="Gemini đọc nội dung ảnh và gợi ý cho người khiếm thị" width="32%">
-  <img src="assets/demo-ocr-tieng-viet.png" alt="Kết quả thử nghiệm OCR tiếng Việt" width="32%">
-</div>
-
-*Ảnh minh họa là kết quả chạy thử trên ảnh mẫu; độ chính xác thực tế phụ thuộc ảnh, OCR và phản hồi của mô hình.*
-
-## Chức năng chính
-
-| Chức năng | Mô tả |
-|---|---|
-| Phân tích ảnh bằng Gemini | Mô tả toàn cảnh, nhận biết vật thể và vị trí tương đối |
-| Hỗ trợ tiếp cận | Đọc nội dung ảnh, văn bản và gợi ý bằng tiếng Việt |
-| Hỗ trợ di chuyển | Nêu vật cản/nguy cơ suy ra từ một ảnh tĩnh |
-| Nhận diện tiền Việt | Phân tích ảnh tiền bằng Gemini |
-| Hỏi đáp và tìm vật | Đặt câu hỏi hoặc tìm một vật trong ảnh hiện tại |
-| OCR cục bộ | Đọc văn bản bằng Tesseract với dữ liệu ngôn ngữ đã cài |
-| Giọng nói | Đọc kết quả bằng Edge TTS/Windows TTS; nhận dạng giọng nói cần Internet |
-| Lịch sử và trợ năng | Xem lại phân tích, thống kê, tăng cỡ chữ/nút và làm rõ focus bàn phím |
-
-## Kiến trúc
-
-```mermaid
-flowchart LR
-    U[Người dùng] -->|Tải ảnh hoặc chụp ảnh| UI[Streamlit UI]
-    UI --> V[Google Gemini Vision]
-    UI --> O[Tesseract OCR cục bộ]
-    UI --> S[SpeechRecognition / TTS]
-    V --> R[Kết quả và cảnh báo]
-    O --> R
-    R --> H[Lịch sử JSON cục bộ]
-    R --> U
-```
-
-## Công nghệ
-
-| Thành phần | Công nghệ |
-|---|---|
-| Giao diện | Python, Streamlit |
-| Phân tích hình ảnh | Google Gemini API (`google-genai`) |
-| OCR | Tesseract OCR, `pytesseract`, Pillow |
-| Nhận dạng và tổng hợp giọng nói | SpeechRecognition, Edge TTS, Windows SAPI5 |
-| Kiểm thử | `unittest` |
+Camera chỉ chụp ảnh khi người dùng chủ động cấp quyền và bấm chụp; đây không phải phát trực tiếp. Trong khung chat Vision có thể nhập câu hỏi bằng bàn phím hoặc bấm ghi âm, sau đó chọn **Nhận diện và gửi cho Vision**. Micro chỉ được dùng sau thao tác ghi âm của người dùng. `st.audio_input` không cung cấp sự kiện khi bắt đầu/kết thúc thu âm, vì vậy robot không thể đồng bộ hoạt ảnh `listening` trong lúc micro đang thu. Ứng dụng xử lý bản ghi sau khi người dùng kết thúc, rồi chuyển trạng thái sang xử lý/trả lời.
 
 ## Chạy trên Windows
 
-### Yêu cầu
+1. Cài Python 3.11 hoặc 3.12 và đánh dấu **Add Python to PATH**.
+2. Mở PowerShell trong thư mục có `app.py`.
+3. Tạo môi trường và cài thư viện:
 
-- Python 3.11 hoặc 3.12.
-- Internet và Gemini API key để dùng các chức năng AI.
-- Tesseract cùng dữ liệu `vie` và `eng` nếu muốn dùng OCR cục bộ.
-
-### Cài đặt
-
-Mở PowerShell trong thư mục dự án (thư mục chứa `app.py`), sau đó chạy:
-
-```powershell
-py -3.12 -m venv .venv
-.\.venv\Scripts\Activate.ps1
-python -m pip install -r requirements.txt
-Copy-Item .env.example .env
-notepad .env
-```
-
-Trong `.env`, điền API key lấy từ [Google AI Studio](https://aistudio.google.com/apikey):
-
-```dotenv
-GEMINI_API_KEY=YOUR_GEMINI_API_KEY
-```
-
-Lưu file rồi khởi động ứng dụng:
-
-```powershell
-python -m streamlit run app.py
-```
-
-Mở địa chỉ `http://localhost:8501` trong trình duyệt. Có thể dùng `CHAY_VISIONAI.bat` để chạy trên Windows.
-
-> **Giữ API key riêng tư:** `.env` chỉ để trên máy cá nhân. Không commit file này, không ghi key vào README, ảnh chụp hoặc báo cáo. `.env.example` là mẫu trống, không phải API key dùng được.
-
-## Triển khai web
-
-Ứng dụng có thể triển khai trên Streamlit Community Cloud:
-
-1. Đưa source lên GitHub với `app.py` và `requirements.txt` ở thư mục gốc.
-2. Tạo ứng dụng tại [share.streamlit.io](https://share.streamlit.io/) và chọn repository, nhánh `main`, file `app.py`.
-3. Trong **Advanced settings → Secrets**, đặt:
-
-   ```toml
-   GEMINI_API_KEY = "YOUR_GEMINI_API_KEY"
+   ```powershell
+   py -m venv .venv
+   .\.venv\Scripts\Activate.ps1
+   python -m pip install -r requirements.txt
    ```
 
-4. Deploy và mở URL `streamlit.app` được cấp.
+4. Tạo file cấu hình riêng và mở để nhập API key:
 
-`packages.txt` cài Tesseract tiếng Anh/Việt cho môi trường Linux. Các tính năng Gemini cần API key và Internet; STT cần dịch vụ nhận dạng qua Internet.
+   ```powershell
+   Copy-Item .env.example .env
+   notepad .env
+   ```
 
-## Kiểm thử
+5. Nhập `GEMINI_API_KEY=...` trong `.env`. File `.env` phải nằm cùng cấp với `app.py`, không nằm ở thư mục bên ngoài. Tạo API key tại Google AI Studio: https://aistudio.google.com/apikey. Không dùng biến `OPENAI_API_KEY`; ứng dụng này gọi Gemini API.
+6. Khởi động bằng `CHAY_VISIONAI.bat` hoặc chạy `python -m streamlit run app.py`.
 
-Chạy bộ kiểm thử cục bộ (không gọi Gemini thật):
+## Model Gemini dự phòng
+
+`GEMINI_MODELS` là danh sách model Gemini được ưu tiên thử theo thứ tự, phân tách bằng dấu phẩy. Mặc định: `gemini-3.8-flash,gemini-3.6-flash,gemini-3.5-flash-lite,gemini-3.1-flash-lite`; các model Gemini mặc định sẽ được thêm vào sau danh sách tùy chỉnh nếu chưa có. Khi gặp giới hạn 429, ứng dụng chuyển ngay sang model Gemini kế tiếp; lỗi máy chủ 503 được thử lại một lần rồi mới chuyển model. Tất cả lựa chọn đều dùng Google Gemini, không chuyển sang nhà cung cấp AI khác. Cơ chế dự phòng có thể giúp khi giới hạn áp dụng riêng cho từng model, nhưng không thể vượt quota dùng chung/hết hạn mức tài khoản, API key sai hoặc lỗi mạng. Vào **Cài đặt → Kiểm tra kết nối Gemini** để thử một yêu cầu nhỏ.
+
+Hỏi đáp/tìm đồ vật trong ảnh dùng một lượt gọi Gemini, yêu cầu rà toàn ảnh và ghi riêng tên, vị trí tương đối, dấu hiệu nhận biết và độ tin cậy của từng vật. Mô hình có thể bỏ sót đồ vật nhỏ hoặc chồng lấp; danh sách cần được đối chiếu với ảnh, không xem là bảo đảm nhận diện đủ số lượng.
+
+Gemini trả dữ liệu JSON để ứng dụng xử lý; ứng dụng chuyển JSON hợp lệ thành văn bản/danh sách tiếng Việt trước khi hiển thị. Nếu phản hồi không đúng JSON, ứng dụng có thể giữ nguyên nội dung phản hồi.
+
+## Kiểm thử cục bộ (không cần API key)
+
+Sau khi cài thư viện, chạy trong thư mục dự án:
 
 ```powershell
-python -m unittest discover -s tests -v
+.\.venv\Scripts\python.exe -m unittest discover -s tests -v
 ```
 
-Các kiểm thử xác minh một số hành vi của ứng dụng như xử lý ảnh, lưu lịch sử, trợ năng, lệnh thoại và tạo yêu cầu Gemini. Chúng không đo độ chính xác của mô hình.
+Kiểm thử cục bộ bao gồm chuẩn hóa ảnh, lưu lịch sử, trợ năng, lệnh thoại và cách tạo yêu cầu Gemini. Chúng không thay thế kiểm thử gọi Gemini thật.
 
-## Cấu trúc dự án
+## OCR tiếng Việt
 
-```text
-.
-├── app.py                    # Ứng dụng Streamlit
-├── modules/                  # Gemini, OCR, giọng nói, trợ năng và tiện ích
-├── ui/vision_robot/          # Giao diện robot Vision
-├── assets/                   # Banner và ảnh minh họa README
-├── tests/                    # Kiểm thử unittest
-├── data/                     # Lịch sử cục bộ được tạo khi chạy
-├── .streamlit/               # Cấu hình giao diện
-├── requirements.txt          # Thư viện Python
-├── packages.txt              # Gói hệ thống cho môi trường Linux
-└── .env.example              # Mẫu cấu hình; không chứa key thật
-```
+- Cài Tesseract OCR cho Windows và dữ liệu ngôn ngữ **Vietnamese (vie)** cùng **English (eng)**.
+- Chạy `setup_ocr.ps1` nếu phù hợp; nếu không, cài Tesseract bằng trình cài đặt chính thức.
+- Nếu Tesseract ở vị trí khác, đặt đường dẫn đầy đủ đến `tesseract.exe` trong `TESSERACT_CMD` của `.env`.
+- OCR cục bộ chạy trên máy, không cần API key.
 
-## Giới hạn và an toàn
+## Giọng nói
 
-- Mô hình có thể mô tả hoặc nhận diện sai; cần kiểm tra lại nội dung quan trọng.
-- OCR tiếng Việt phụ thuộc chất lượng ảnh và dữ liệu `vie` của Tesseract.
-- Hỗ trợ di chuyển chỉ suy luận từ ảnh tĩnh, không theo dõi môi trường trực tiếp. Không dùng kết quả thay cho gậy, chó dẫn đường hoặc thiết bị an toàn đã được kiểm chứng.
-- Camera và microphone cần người dùng chủ động cấp quyền; chưa có đánh giá với người dùng thực tế.
-- Lịch sử được lưu cục bộ trong `data/history.json`; tránh đưa thông tin nhạy cảm vào ảnh hoặc câu hỏi.
+TTS ưu tiên Edge TTS có giọng tiếng Việt, sau đó thử Windows TTS. Nhận dạng âm thanh thành chữ sử dụng SpeechRecognition/Google Web Speech và cần Internet. Đây là luồng ghi âm → chuyển thành chữ → hỏi Gemini → đọc câu trả lời, chưa phải voice streaming thời gian thực. Các lệnh có thể điều hướng trang, tìm vật trong ảnh gần nhất và đọc lại phản hồi; người dùng luôn chủ động ghi âm và xác nhận nhận diện. Phân tích ảnh và hỏi đáp AI tiếp tục dùng Google Gemini; OCR cục bộ là phương án riêng khi không có Gemini/API.
+
+Trong thanh bên, bật **Chữ lớn, nút lớn, focus rõ** để tăng cỡ chữ, kích thước nút và làm nổi bật điều khiển khi dùng bàn phím. Với tính năng di chuyển, ứng dụng phân tích ảnh tĩnh chứ không theo dõi chướng ngại vật trực tiếp; không dùng thay cho gậy, chó dẫn đường hay thiết bị hỗ trợ đã được kiểm chứng. Kết quả không phát hiện nguy cơ không đồng nghĩa với lối đi an toàn.
+
+## Bảo mật
+
+- Không tải `.env` lên GitHub hoặc gửi file này cho người khác.
+- Không đưa API key vào mã nguồn, ảnh chụp màn hình hay báo cáo.
+- Lịch sử lưu cục bộ trong `data/history.json`; tránh lưu thông tin nhạy cảm.
+- Kết quả AI/OCR chỉ mang tính hỗ trợ, không thay thế thiết bị an toàn hoặc quyết định chuyên môn.
